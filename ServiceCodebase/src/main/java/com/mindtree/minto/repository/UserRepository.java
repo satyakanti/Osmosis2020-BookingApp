@@ -31,7 +31,7 @@ public interface UserRepository extends JpaRepository<User, Integer> {
     Optional<String> getWalletIDByName(@Param("name") String email);
     
     @Query(value = "select ti.TRAVEL_INFO from TRAVEL_INFORMATION ti, USER_INFORMATION u where u.EMAIL_ID = :email and u.USER_ID = ti.USER_ID" , nativeQuery = true)
-    List<String> getTravelInfos(@Param("email") String email);
+    List<byte[]> getTravelInfos(@Param("email") String email);
     
     @Query("from USER_INFORMATION u where u.email = :email")
     List<User> getUsers(@Param("email") String email);

@@ -71,15 +71,6 @@ public class MintoController {
 
     }
 
-    /*
-     * @GetMapping(value = "/api/setData") public String setData() {
-     * Optional<User> findById = userDAO.findById(17); if (findById.isPresent())
-     * { // findById.get().setEmail("Uber.cabs@sabrepay.com");
-     * findById.get().setWalletID("e4b49f4d13c63b64c9c4d713f0809af5a3fd150d");
-     * findById.get().setRegistrationTimeStamp(null); }
-     * userDAO.save(findById.get()); return "done"; }
-     */
-
     @ApiOperation(value = "Login user with faceID", response = ConfirmLoginStatusDTO.class)
     @PostMapping(value = "/api/faceIdLogin")
     public ResponseEntity<ConfirmLoginStatusDTO> loginByFaceId(@RequestBody @Valid FaceIdDTO login)
@@ -101,7 +92,7 @@ public class MintoController {
         return new ResponseEntity<ConfirmWalletID>(mintoService.createNewWalletOnBlockChain(), HttpStatus.OK);
     }
 
-    @ApiOperation(value = "Get Sabre Account's Current Balance")
+    @ApiOperation(value = "Get Mindtree Account's Current Balance")
     @GetMapping(value = "/api/getBalance")
     public ResponseEntity<ConfirmBalance> getBalance() {
         return new ResponseEntity<ConfirmBalance>(mintoService.getBalance(), HttpStatus.OK);

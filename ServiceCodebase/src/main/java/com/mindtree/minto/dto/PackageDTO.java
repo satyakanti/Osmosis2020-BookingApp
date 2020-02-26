@@ -31,6 +31,12 @@ public class PackageDTO {
 	 * @return the total
 	 */
 	public Integer getTotal() {
+		if (total == null || total == 0) {
+			total = 0;
+			for (PackageBookingDTO booking : bookings) {
+				total += booking.getAmount();
+			}
+		}
 		return total;
 	}
 

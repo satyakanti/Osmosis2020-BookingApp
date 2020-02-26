@@ -6,12 +6,17 @@ package com.mindtree.minto.dto;
 import java.util.LinkedHashSet;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 /**
  * @author M1026334
  *
  */
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class FlightItinerary {
+	@JsonInclude(JsonInclude.Include.NON_EMPTY)
 	private LinkedHashSet<String> airlineCodes;
+	@JsonInclude(JsonInclude.Include.NON_EMPTY)
 	private LinkedHashSet<String> airlineNames;
 	private String originPoint;
 	private String originCountry;
@@ -24,10 +29,15 @@ public class FlightItinerary {
 	private String arrivalTime;
 	private Integer arrivalOffset;
 	private Integer journeyDuration;
-	private List<Integer> layoverPorts;
+	@JsonInclude(JsonInclude.Include.NON_EMPTY)
+	private List<String> layoverPorts;
+	@JsonInclude(JsonInclude.Include.NON_EMPTY)
 	private List<Integer> layoverDurations;
+	@JsonInclude(JsonInclude.Include.NON_EMPTY)
 	private List<String> layoverCities;
+	@JsonInclude(JsonInclude.Include.NON_EMPTY)
 	private List<String> layoverAirportNames;
+	@JsonInclude(JsonInclude.Include.NON_EMPTY)
 	private List<FlightInfo> flightInfos;
 	
 	/**
@@ -186,16 +196,17 @@ public class FlightItinerary {
 	public void setJourneyDuration(Integer journeyDuration) {
 		this.journeyDuration = journeyDuration;
 	}
+	
 	/**
 	 * @return the layoverPorts
 	 */
-	public List<Integer> getLayoverPorts() {
+	public List<String> getLayoverPorts() {
 		return layoverPorts;
 	}
 	/**
 	 * @param layoverPorts the layoverPorts to set
 	 */
-	public void setLayoverPorts(List<Integer> layoverPorts) {
+	public void setLayoverPorts(List<String> layoverPorts) {
 		this.layoverPorts = layoverPorts;
 	}
 	/**

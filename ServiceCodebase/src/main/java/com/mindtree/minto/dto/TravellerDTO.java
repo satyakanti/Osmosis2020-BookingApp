@@ -14,7 +14,7 @@ public class TravellerDTO {
     
     private String contact;
     
-    private Date issueDate;
+    private Date issuingDate;
     
     private Date expiryDate;
     
@@ -22,7 +22,7 @@ public class TravellerDTO {
     
     private String gender;
    
-    private String issueCountry;
+    private String issuingCountry;
     
 	public Integer getTravellerId() {
 		return travellerId;
@@ -64,12 +64,12 @@ public class TravellerDTO {
 		this.contact = contact;
 	}
 
-	public Date getIssueDate() {
-		return issueDate;
+	public Date getIssuingDate() {
+		return issuingDate;
 	}
 
-	public void setIssueDate(Date issueDate) {
-		this.issueDate = issueDate;
+	public void setIssuingDate(Date issuingDate) {
+		this.issuingDate = issuingDate;
 	}
 
 	public Date getExpiryDate() {
@@ -96,12 +96,12 @@ public class TravellerDTO {
 		this.gender = gender;
 	}
 
-	public String getIssueCountry() {
-		return issueCountry;
+	public String getIssuingCountry() {
+		return issuingCountry;
 	}
 
-	public void setIssueCountry(String issueCountry) {
-		this.issueCountry = issueCountry;
+	public void setIissuingCountry(String issuingCountry) {
+		this.issuingCountry = issuingCountry;
 	}
 
 	@Override

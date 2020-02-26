@@ -3,12 +3,14 @@
  */
 package com.mindtree.minto.dto;
 
+import java.text.SimpleDateFormat;
 import java.util.Date;
 
 /**
  * @author M1026334
  *
  */
+
 public class FlightInfo {
 	 private String airlineCode;
 	 private String aircraft;
@@ -232,6 +234,19 @@ public class FlightInfo {
 	 */
 	public void setArrivalOffset(String arrivalOffset) {
 		this.arrivalOffset = arrivalOffset;
+	}
+	
+	@Override
+	public String toString() {
+		return airlineCode+flightNo + "-" + getDepDate() + "-" + originPoint + "-" + destinationPoint;
+	}
+	/**
+	 * @return
+	 */
+	public String getDepDate() {
+		SimpleDateFormat sdf = new SimpleDateFormat("ddMMMyyyy");
+		String depDate = sdf.format(departureDate);
+		return depDate;
 	}
 	 
 	 

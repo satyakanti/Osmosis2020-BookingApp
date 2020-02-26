@@ -33,6 +33,8 @@ import com.mindtree.minto.dto.ConfirmLoginStatusDTO;
 import com.mindtree.minto.dto.ConfirmUserDTO;
 import com.mindtree.minto.dto.ConfirmWalletID;
 import com.mindtree.minto.dto.Events;
+import com.mindtree.minto.dto.FlightInfo;
+import com.mindtree.minto.dto.FlightItinerary;
 import com.mindtree.minto.dto.LoginDTO;
 import com.mindtree.minto.dto.PackageBookingDTO;
 import com.mindtree.minto.dto.PackageDTO;
@@ -160,26 +162,25 @@ public class MintoServiceImpl implements MintoService {
         user.setPswrd(regUserserDTO.getPassword());
         user.setUserRole(regUserserDTO.getUserRole());
         user.setWalletID(regUserserDTO.getWalletID());
-        user.setFirstName(regUserserDTO.getFirstName());
-        user.setLastName(regUserserDTO.getLastName());
-        user.setDateOfBirth(regUserserDTO.getDateOfBirth());
         user.setContact(regUserserDTO.getContact());
-		if (regUserserDTO.getFirstName() != null || regUserserDTO.getLastName() != null) {
-			Traveller traveller = new Traveller();
-			traveller.setFirstName(regUserserDTO.getFirstName());
-			traveller.setLastName(regUserserDTO.getLastName());
-			traveller.setDateOfBirth(regUserserDTO.getDateOfBirth());
-			traveller.setContact(regUserserDTO.getContact());
-			traveller.setGender(regUserserDTO.getGender());
-			traveller.setPassportNo(regUserserDTO.getPassportNo());
-			traveller.setIssueCountry(regUserserDTO.getIssuingCountry());
-			traveller.setIssueDate(regUserserDTO.getIssuingDate());
-			traveller.setExpiryDate(regUserserDTO.getExpiryDate());
-			traveller.setUser(user);
-			Set<Traveller> travellers = new HashSet<Traveller>();
-			travellers.add(traveller);
-			user.setTravellers(travellers);
-		}
+        user.setDateOfBirth(regUserserDTO.getPrimaryUser().getDateOfBirth());
+		user.setFirstName(regUserserDTO.getPrimaryUser().getFirstName());
+		user.setLastName(regUserserDTO.getPrimaryUser().getLastName());
+		
+		Traveller traveller = new Traveller();
+		traveller.setFirstName(regUserserDTO.getPrimaryUser().getFirstName());
+		traveller.setLastName(regUserserDTO.getPrimaryUser().getLastName());
+		traveller.setDateOfBirth(regUserserDTO.getPrimaryUser().getDateOfBirth());
+		traveller.setContact(regUserserDTO.getContact());
+		traveller.setGender(regUserserDTO.getPrimaryUser().getGender());
+		traveller.setPassportNo(regUserserDTO.getPrimaryUser().getPassportNo());
+		traveller.setIssueCountry(regUserserDTO.getPrimaryUser().getIssuingCountry());
+		traveller.setIssueDate(regUserserDTO.getPrimaryUser().getIssuingDate());
+		traveller.setExpiryDate(regUserserDTO.getPrimaryUser().getExpiryDate());
+		traveller.setUser(user);
+		Set<Traveller> travellers = new HashSet<Traveller>();
+		travellers.add(traveller);
+		user.setTravellers(travellers);
 		user.setRegistrationDate(new Date());
         return user;
     }
@@ -273,10 +274,17 @@ public class MintoServiceImpl implements MintoService {
         catch (Exception e) {
             throw new AuthenticationFailureException("Login Failed");
         }
-        if (result != null) {
-            confirmLoginStatusDTO = new ConfirmLoginStatusDTO();
-    		confirmLoginStatusDTO.setMessage("Authentication Successful");
-    		mapEntityToDTO(user, confirmLoginStatusDTO);
+        if (result != null && result.getBody() != null) {
+        	Map<String, Object> responseMap = (java.util.Map<String, Object>) result.getBody();
+        	Boolean isIdentical = (Boolean) responseMap.get("isIdentical");
+        	if (isIdentical != null && isIdentical) {
+        		confirmLoginStatusDTO = new ConfirmLoginStatusDTO();
+        		confirmLoginStatusDTO.setMessage("Authentication Successful");
+        		mapEntityToDTO(user, confirmLoginStatusDTO);
+        	}
+        	else {
+                throw new AuthenticationFailureException("Face ID Not Matched");
+            }
         }
         else {
             throw new AuthenticationFailureException("Face ID Authentication Failed");
@@ -433,23 +441,21 @@ public class MintoServiceImpl implements MintoService {
     @Override
     public List<Transactions> getSpecificTokenTransactions(String emailID) {
         List<Transactions> filteredTransactions = null;
-        StringBuilder prefixedWalletID = new StringBuilder("0x");
         Optional<String> walletID = userDAO.getWalletID(emailID);
         if (walletID.isPresent()) {
-            prefixedWalletID.append(walletID.get());
             ResponseEntity<TransactionResultSet> last25Transactions = restTemplate.exchange(
                 ConfigReader.getBalanceURL().concat(ConfigReader.getCoinContractID().concat("/transfers")),
                 HttpMethod.GET, setHeaderAndAuthToken(), TransactionResultSet.class);
             filteredTransactions = new ArrayList<Transactions>();
             for (Transactions transaction : last25Transactions.getBody().getTransactions()) {
-                if (String.valueOf(prefixedWalletID).equalsIgnoreCase(transaction.getFrom())
-                    || String.valueOf(prefixedWalletID).equalsIgnoreCase(transaction.getTo())) {
+                if (walletID.get().equalsIgnoreCase(transaction.getFrom())
+                    || walletID.get().equalsIgnoreCase(transaction.getTo())) {
                     filteredTransactions.add(transaction);
                 }
                 else {
                     for (Events event : transaction.getEvents()) {
-                        if (String.valueOf(prefixedWalletID).equalsIgnoreCase(event.getFrom())
-                            || String.valueOf(prefixedWalletID).equalsIgnoreCase(event.getTo())) {
+                        if (walletID.get().equalsIgnoreCase(event.getFrom())
+                            || walletID.get().equalsIgnoreCase(event.getTo())) {
                             filteredTransactions.add(transaction);
                             break;
                         }
@@ -560,7 +566,8 @@ public class MintoServiceImpl implements MintoService {
     		ConfirmBalance balance = getBalance(user.getWalletID());
     		if (Integer.valueOf(balance.getBalance()) > packageDTO.getTotal()) {
     			transferFunds(packageDTO, user.getWalletID());
-    			
+    			addTravelInfo(user, packageDTO.getTravelInfo());
+    			createBookings(packageDTO, user);
     		}
     		else {
     			throw new TransferFailureException("Insufficient Funds");
@@ -568,6 +575,68 @@ public class MintoServiceImpl implements MintoService {
     	}
     	
 		return new ConfirmBooking("Booking successfull");
+	}
+
+	/**
+	 * @param packageDTO
+	 * @param user
+	 */
+	public void createBookings(PackageDTO packageDTO, User user) {
+		createBooking(user, packageDTO.getFlight().getOfferPack().getOnwardFlightItinerary());
+		createBooking(user, packageDTO.getFlight().getOfferPack().getReturnFlightItinerary());
+	}
+
+	/**
+	 * @param user
+	 * @param itinerary
+	 */
+	public void createBooking(User user, FlightItinerary itinerary) {
+		if (itinerary != null) {
+			Booking booking = new Booking();
+			booking.setEmail(user.getEmail());
+			booking.setFirstName(user.getFirstName());
+			booking.setLastName(user.getLastName());
+			List<FlightInfo> flightInfos = itinerary.getFlightInfos();
+			booking.setFlightdetails(getFlightDetails(flightInfos));
+			booking.setDateOfFirstSegment(flightInfos.get(0).getDepartureDate());
+			bookingDAO.save(booking);
+		}
+	}
+
+	/**
+	 * @param flightInfos
+	 * @return
+	 */
+	public String getFlightDetails(List<FlightInfo> flightInfos) {
+		StringBuilder builder = new StringBuilder();
+		for (FlightInfo flightInfo : flightInfos) {
+			if (builder.length() != 0) {
+				builder.append("#");
+			}
+			builder.append(flightInfo.toString());
+		}
+		String flightDetails = builder.toString();
+		return flightDetails;
+	}
+
+	private Booking constructBooking(User user) {
+		Booking booking = new Booking();
+		booking.setEmail(user.getEmail());
+		booking.setFirstName(user.getFirstName());
+		booking.setLastName(user.getLastName());
+		return booking;
+	}
+
+	private void addTravelInfo(User user, String travelInfoString) {
+		TravelInfo travelInfo = new TravelInfo();
+		travelInfo.setTravelInfo(travelInfoString.getBytes());
+		travelInfo.setUser(user);
+		if (user.getTravelInfos() == null) {
+			Set<TravelInfo> travelInfos = new HashSet<TravelInfo>();
+			user.setTravelInfos(travelInfos);
+		}
+		user.getTravelInfos().add(travelInfo);
+		userDAO.save(user);
 	}
 
 	private User findUser(String email) throws AuthenticationFailureException {
@@ -596,6 +665,7 @@ public class MintoServiceImpl implements MintoService {
     					createRequestJsonWithHeaders(walletId, partnerWalletID.get(), bookingDTO.getAmount()), Object.class);
     		}
     		catch (Exception ex) {
+    			ex.printStackTrace();
     			throw new TransferFailureException("Transfer Filed");
     		}
     	}
@@ -631,8 +701,8 @@ public class MintoServiceImpl implements MintoService {
      */
     private HttpEntity<String> createRequestJsonWithHeaders(String loggedInUserWalletID,
         String toAddress, Integer amount) {
-        String requestJSON = "{\"toAddress\" : \"0x" + toAddress + "\", \"amount\" : " + amount
-            + ", \"from\" : \"0x" + loggedInUserWalletID + "\"}";
+        String requestJSON = "{\"toAddress\" : \"" + toAddress + "\", \"amount\" : " + amount
+            + ", \"from\" : \"" + loggedInUserWalletID + "\"}";
         System.out.println(requestJSON);
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -655,7 +725,12 @@ public class MintoServiceImpl implements MintoService {
 
 	@Override
 	public List<String> getTravelInfo(String email) {
-		return userDAO.getTravelInfos(email);
+		List<String> travelInfoList = new ArrayList<String>();
+		List<byte[]> travelInfos = userDAO.getTravelInfos(email);
+		for (byte[] travelInfo : travelInfos) {
+			travelInfoList.add(new String(travelInfo));
+		}
+		return travelInfoList;
 	}
 
 	@Override
@@ -719,7 +794,7 @@ public class MintoServiceImpl implements MintoService {
 			for (TravelInfo travelInfo : user.getTravelInfos()) {
 				TravelInfoDTO travelInfoDTO = new TravelInfoDTO();
 				travelInfoDTO.setTravelId(travelInfo.getTravelId());
-				travelInfoDTO.setTravelInfo(travelInfo.getTravelInfo());
+				travelInfoDTO.setTravelInfo(new String(travelInfo.getTravelInfo()));
 				travelInfoDTOs.add(travelInfoDTO);
 			}
 		}
@@ -735,8 +810,8 @@ public class MintoServiceImpl implements MintoService {
 				travellerDTO.setDateOfBirth(traveller.getDateOfBirth());
 				travellerDTO.setGender(traveller.getGender());
 				travellerDTO.setPassportNo(traveller.getPassportNo());
-				travellerDTO.setIssueCountry(traveller.getIssueCountry());
-				travellerDTO.setIssueDate(traveller.getIssueDate());
+				travellerDTO.setIissuingCountry(traveller.getIssueCountry());
+				travellerDTO.setIssuingDate(traveller.getIssueDate());
 				travellerDTO.setExpiryDate(traveller.getExpiryDate());
 				travellerDTOs.add(travellerDTO);
 			}

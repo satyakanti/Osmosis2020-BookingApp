@@ -3,10 +3,13 @@
  */
 package com.mindtree.minto.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 /**
  * @author M1026334
  *
  */
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class OfferPack {
 	private FlightItinerary onwardFlightItinerary;
 	private FlightItinerary ReturnFlightItinerary;

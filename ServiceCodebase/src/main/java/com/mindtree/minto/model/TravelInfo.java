@@ -8,6 +8,7 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
+import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 
 /**
@@ -32,8 +33,9 @@ public class TravelInfo {
     /**
      * travelInfo
      */
-    @Column(name = "TRAVEL_INFO")
-    private String travelInfo;
+    @Lob
+    @Column(name = "TRAVEL_INFO", columnDefinition="BLOB")
+    private byte[] travelInfo;
 
 	public Integer getTravelId() {
 		return travelId;
@@ -43,12 +45,20 @@ public class TravelInfo {
 		this.travelId = travelId;
 	}
 
-	public String getTravelInfo() {
+	public byte[] getTravelInfo() {
 		return travelInfo;
 	}
 
-	public void setTravelInfo(String travelInfo) {
+	public void setTravelInfo(byte[] travelInfo) {
 		this.travelInfo = travelInfo;
+	}
+	
+	public User getUser() {
+		return user;
+	}
+
+	public void setUser(User user) {
+		this.user = user;
 	}
 
 	@Override
