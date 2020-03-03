@@ -65,8 +65,17 @@ public class MintoController {
     @ApiOperation(value = "Login user with username and password", response = ConfirmLoginStatusDTO.class)
     @PostMapping(value = "/api/login")
     public ResponseEntity<ConfirmLoginStatusDTO> login(@RequestBody @Valid LoginDTO login)
-        throws AuthenticationFailureException {
-        ConfirmLoginStatusDTO loginStatus = mintoService.checkAndLogin(login);
+        throws AuthenticationFailureException, InvalidRequestException {
+    	ConfirmLoginStatusDTO loginStatus = null;
+    	if (login.getFaceId() != null) {
+    		loginStatus = mintoService.faceIdLoginImpl(login.getEmail(), login.getFaceId());
+    	}
+    	else if (login.getPassword() != null) {
+    		loginStatus = mintoService.checkAndLogin(login);
+    	}
+    	else {
+    		throw new InvalidRequestException("Password or FaceId Mandatory in Request");
+    	}
         return new ResponseEntity<ConfirmLoginStatusDTO>(loginStatus, HttpStatus.OK);
 
     }
@@ -117,18 +126,32 @@ public class MintoController {
         }
         return new ResponseEntity<ReconciliationReport>(report, HttpStatus.OK);
     }
+    
+    @ApiOperation(value = "Get Reconciliation report New")
+    @GetMapping(value = "/api/generateReconReport/{emailID}")
+    public ResponseEntity<ReconciliationReport> generateReconReport(@PathVariable("emailID") String emailID)
+        throws InvalidRequestException {
+        ReconciliationReport report;
+        try {
+            report = mintoService.generateReconciliationReport(emailID.toLowerCase());
+        }
+        catch (InvalidRequestException e) {
+            throw new InvalidRequestException("Wallet ID Not Found in DB");
+        }
+        return new ResponseEntity<ReconciliationReport>(report, HttpStatus.OK);
+    }
 
     @ApiOperation(value = "Get Logged In User's Transactions")
     @GetMapping(value = "/api/getSpecificTransactions/{emailID}")
     public ResponseEntity<Object> getSpecificTokenTransactions(@PathVariable("emailID") String emailID) {
-        return new ResponseEntity<Object>(mintoService.getSpecificTokenTransactions(emailID), HttpStatus.OK);
+        return new ResponseEntity<Object>(mintoService.getSpecificTokenTransactions(emailID.toLowerCase()), HttpStatus.OK);
     }
 
     @ApiOperation(value = "Get Logged In User's Balance")
     @GetMapping(value = "/api/getUserBalance/{emailID}")
     public ResponseEntity<ConfirmBalance> getUserBalance(@PathVariable("emailID") String emailID)
         throws InvalidRequestException {
-        return new ResponseEntity<ConfirmBalance>(mintoService.getUserBalance(emailID), HttpStatus.OK);
+        return new ResponseEntity<ConfirmBalance>(mintoService.getUserBalance(emailID.toLowerCase()), HttpStatus.OK);
     }
 
     @ApiOperation(value = "")
@@ -150,7 +173,7 @@ public class MintoController {
     @ApiOperation(value = "")
     @GetMapping(value = "/api/getTravleInfo/{emailID}")
     public ResponseEntity<List<String>> getTravleInfo(@PathVariable("emailID") String emailID) {
-        List<String> travelInfos = mintoService.getTravelInfo(emailID);
+        List<String> travelInfos = mintoService.getTravelInfo(emailID.toLowerCase());
         return new ResponseEntity<List<String>>(travelInfos, HttpStatus.OK);
     }
     
@@ -164,7 +187,7 @@ public class MintoController {
     @ApiOperation(value = "")
     @GetMapping(value = "/api/user/{email}")
     public ResponseEntity<UserDTO> getUser(@PathVariable("email") String email) throws AuthenticationFailureException {
-        UserDTO user = mintoService.getUser(email);
+        UserDTO user = mintoService.getUser(email.toLowerCase());
         return new ResponseEntity<UserDTO>(user, HttpStatus.OK);
     }
     

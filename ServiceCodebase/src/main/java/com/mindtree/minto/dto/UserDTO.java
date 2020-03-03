@@ -8,6 +8,22 @@ public class UserDTO extends BaseUserDTO {
 	private Date registeredDate;
 	private List<TravelInfoDTO> travelInfos;
 	private List<TravellerDTO> travellers;
+	private TravellerDTO primaryUser;
+
+	/**
+	 * @return the primaryUser
+	 */
+	public TravellerDTO getPrimaryUser() {
+		return primaryUser;
+	}
+
+	/**
+	 * @param primaryUser the primaryUser to set
+	 */
+	public void setPrimaryUser(TravellerDTO primaryUser) {
+		this.primaryUser = primaryUser;
+	}
+	
 	public Integer getUserId() {
 		return userId;
 	}

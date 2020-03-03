@@ -5,6 +5,8 @@ import java.util.List;
 import javax.validation.constraints.Email;
 import javax.validation.constraints.NotNull;
 
+import com.mindtree.minto.util.CommonUtil;
+
 public class PackageDTO {
 
 	
@@ -89,7 +91,7 @@ public class PackageDTO {
 	}
 
 	public void setEmail(String email) {
-		this.email = email;
+		this.email = CommonUtil.toLowerCase(email);
 	}
 
 	public List<PackageBookingDTO> getBookings() {

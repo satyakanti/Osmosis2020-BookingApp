@@ -2,6 +2,8 @@ package com.mindtree.minto.dto;
 
 import java.util.Date;
 
+import com.mindtree.minto.util.CommonUtil;
+
 public class TravellerDTO {
 	
     private Integer travellerId;
@@ -37,7 +39,7 @@ public class TravellerDTO {
 	}
 
 	public void setFirstName(String firstName) {
-		this.firstName = firstName;
+		this.firstName = CommonUtil.toUpperCase(firstName);
 	}
 
 	public String getLastName() {
@@ -45,7 +47,7 @@ public class TravellerDTO {
 	}
 
 	public void setLastName(String lastName) {
-		this.lastName = lastName;
+		this.lastName = CommonUtil.toUpperCase(lastName);
 	}
 
 	public Date getDateOfBirth() {
@@ -101,7 +103,7 @@ public class TravellerDTO {
 	}
 
 	public void setIissuingCountry(String issuingCountry) {
-		this.issuingCountry = issuingCountry;
+		this.issuingCountry = CommonUtil.toUpperCase(issuingCountry);
 	}
 
 	@Override

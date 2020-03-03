@@ -8,6 +8,7 @@ import java.util.Date;
 import javax.validation.constraints.Email;
 import javax.validation.constraints.NotNull;
 
+import com.mindtree.minto.util.CommonUtil;
 import com.mindtree.minto.util.PasswordEncryptionUtil;
 
 /**
@@ -79,15 +80,15 @@ public class BaseUserDTO {
 	}
 
 	public void setFirstName(String firstName) {
-		this.firstName = firstName;
+		this.firstName = CommonUtil.toUpperCase(firstName);
 	}
-
+	
 	public String getLastName() {
 		return lastName;
 	}
 
 	public void setLastName(String lastName) {
-		this.lastName = lastName;
+		this.lastName = CommonUtil.toUpperCase(lastName);
 	}
 
 	/**
@@ -102,7 +103,7 @@ public class BaseUserDTO {
      *            the email to set
      */
     public void setEmail(String email) {
-        this.email = email;
+        this.email = CommonUtil.toLowerCase(email);
     }
 
     /**

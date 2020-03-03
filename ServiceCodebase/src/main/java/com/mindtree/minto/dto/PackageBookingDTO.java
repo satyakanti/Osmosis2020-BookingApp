@@ -5,6 +5,8 @@ package com.mindtree.minto.dto;
 
 import javax.validation.constraints.NotNull;
 
+import com.mindtree.minto.util.CommonUtil;
+
 /**
  * @author M1026329
  *
@@ -20,7 +22,7 @@ public class PackageBookingDTO {
 		return partner;
 	}
 	public void setPartner(String partner) {
-		this.partner = partner;
+		this.partner = CommonUtil.toUpperCase(partner);
 	}
 	public int getAmount() {
 		return amount;

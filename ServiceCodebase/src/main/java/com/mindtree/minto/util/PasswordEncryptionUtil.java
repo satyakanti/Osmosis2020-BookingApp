@@ -18,6 +18,9 @@ public class PasswordEncryptionUtil {
      * @return
      */
     public static String hashPassword(String plainTextPassword) {
+    	if (plainTextPassword == null) {
+    		return null;
+    	}
         return BCrypt.hashpw(plainTextPassword, ConfigReader.getPwdEncryption());
     }
 

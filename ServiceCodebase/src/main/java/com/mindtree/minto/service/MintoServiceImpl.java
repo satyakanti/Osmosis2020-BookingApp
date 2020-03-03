@@ -38,6 +38,7 @@ import com.mindtree.minto.dto.FlightItinerary;
 import com.mindtree.minto.dto.LoginDTO;
 import com.mindtree.minto.dto.PackageBookingDTO;
 import com.mindtree.minto.dto.PackageDTO;
+import com.mindtree.minto.dto.ReconcileReports;
 import com.mindtree.minto.dto.ReconciliationReport;
 import com.mindtree.minto.dto.RegisterUserDTO;
 import com.mindtree.minto.dto.TransactionResultSet;
@@ -83,14 +84,18 @@ public class MintoServiceImpl implements MintoService {
      */
     @Override
     public ConfirmUserDTO registerUser(RegisterUserDTO userDTO) throws RegistrationException {
+    	boolean isWalletPresent = true;
         if (userDTO.getWalletID() == null) {
+        	isWalletPresent = false;
             ConfirmWalletID confirmWalletID = createNewWalletOnBlockChain();
             if (confirmWalletID != null) {
                 userDTO.setWalletID(confirmWalletID.getAddress());
             }
         }
         User savedUser = saveUserToDB(userDTO);
-        fundWalletWithInitialTokens(savedUser);
+        if (!isWalletPresent) {
+        	fundWalletWithInitialTokens(savedUser);
+        }
         return mapSavedUserToDTO(savedUser);
     }
 
@@ -104,7 +109,7 @@ public class MintoServiceImpl implements MintoService {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             headers.setBasicAuth(ConfigReader.getAuthUserName(), ConfigReader.getAuthPWD());
-            String requestJSON = "{\"toAddress\" : \"" + savedUser.getWalletID() + "\", \"amount\" : " + 10 + "}";
+            String requestJSON = "{\"toAddress\" : \"" + savedUser.getWalletID() + "\", \"amount\" : " + 2500 + "}";
             HttpEntity<String> request = new HttpEntity<String>(requestJSON, headers);
             try {
                 restTemplate.postForObject(createFundWalletURL(), request, Object.class);
@@ -163,24 +168,28 @@ public class MintoServiceImpl implements MintoService {
         user.setUserRole(regUserserDTO.getUserRole());
         user.setWalletID(regUserserDTO.getWalletID());
         user.setContact(regUserserDTO.getContact());
-        user.setDateOfBirth(regUserserDTO.getPrimaryUser().getDateOfBirth());
-		user.setFirstName(regUserserDTO.getPrimaryUser().getFirstName());
-		user.setLastName(regUserserDTO.getPrimaryUser().getLastName());
-		
-		Traveller traveller = new Traveller();
-		traveller.setFirstName(regUserserDTO.getPrimaryUser().getFirstName());
-		traveller.setLastName(regUserserDTO.getPrimaryUser().getLastName());
-		traveller.setDateOfBirth(regUserserDTO.getPrimaryUser().getDateOfBirth());
-		traveller.setContact(regUserserDTO.getContact());
-		traveller.setGender(regUserserDTO.getPrimaryUser().getGender());
-		traveller.setPassportNo(regUserserDTO.getPrimaryUser().getPassportNo());
-		traveller.setIssueCountry(regUserserDTO.getPrimaryUser().getIssuingCountry());
-		traveller.setIssueDate(regUserserDTO.getPrimaryUser().getIssuingDate());
-		traveller.setExpiryDate(regUserserDTO.getPrimaryUser().getExpiryDate());
-		traveller.setUser(user);
-		Set<Traveller> travellers = new HashSet<Traveller>();
-		travellers.add(traveller);
-		user.setTravellers(travellers);
+        user.setLastName(regUserserDTO.getLastName());
+        if (regUserserDTO.getPrimaryUser() != null) {
+        	user.setDateOfBirth(regUserserDTO.getPrimaryUser().getDateOfBirth());
+        	user.setFirstName(regUserserDTO.getPrimaryUser().getFirstName());
+        	user.setLastName(regUserserDTO.getPrimaryUser().getLastName());
+        	if ("User".equalsIgnoreCase(regUserserDTO.getUserRole())) {
+        		Traveller traveller = new Traveller();
+        		traveller.setFirstName(regUserserDTO.getPrimaryUser().getFirstName());
+        		traveller.setLastName(regUserserDTO.getPrimaryUser().getLastName());
+        		traveller.setDateOfBirth(regUserserDTO.getPrimaryUser().getDateOfBirth());
+        		traveller.setContact(regUserserDTO.getContact());
+        		traveller.setGender(regUserserDTO.getPrimaryUser().getGender());
+        		traveller.setPassportNo(regUserserDTO.getPrimaryUser().getPassportNo());
+        		traveller.setIssueCountry(regUserserDTO.getPrimaryUser().getIssuingCountry());
+        		traveller.setIssueDate(regUserserDTO.getPrimaryUser().getIssuingDate());
+        		traveller.setExpiryDate(regUserserDTO.getPrimaryUser().getExpiryDate());
+        		traveller.setUser(user);
+        		Set<Traveller> travellers = new HashSet<Traveller>();
+        		travellers.add(traveller);
+        		user.setTravellers(travellers);
+        	}
+        }
 		user.setRegistrationDate(new Date());
         return user;
     }
@@ -241,31 +250,20 @@ public class MintoServiceImpl implements MintoService {
     @Override
     public ConfirmLoginStatusDTO faceIdLoginImpl(String email, String faceId)
         throws AuthenticationFailureException, InvalidRequestException {
-        ResponseEntity<Object> result = null;
         User user = null;
         ConfirmLoginStatusDTO confirmLoginStatusDTO = null;
         try {
         	List<User> users = userDAO.getUsers(email);
         	if (users != null && !users.isEmpty()) {
         		user = users.get(0);
-        		if (user != null) {
-        			String faceID1 = user.getFaceID();
-                    HttpHeaders headers = new HttpHeaders();
-                    MediaType mediaType = new MediaType("application", "json");
-                    headers.setContentType(mediaType);
-                    headers.set("Ocp-Apim-Subscription-Key", ConfigReader.getFaceAPISubscriptionKey());
-                    String requestJson = "{\"faceId1\": \"" + faceID1 + "\",\"faceId2\": \"" + faceId + "\"}";
-                    HttpEntity<String> entity = new HttpEntity<String>(requestJson, headers);
-
-                    try {
-                        result = restTemplate.exchange(ConfigReader.getMicrosoftFaceAPI(), HttpMethod.POST, entity,
-                            Object.class);
-                    }
-                    catch (RestClientException e) {
-                    	e.printStackTrace();
-                        throw new AuthenticationFailureException("Couldn't match face");
-                    }
-        		}
+        		if (isFaceMatched(faceId, user)) {
+            		confirmLoginStatusDTO = new ConfirmLoginStatusDTO();
+            		confirmLoginStatusDTO.setMessage("Authentication Successful");
+            		mapEntityToDTO(user, confirmLoginStatusDTO);
+            	}
+            	else {
+                    throw new AuthenticationFailureException("Face ID Not Matched");
+                }
         	}
         	else {
         		throw new AuthenticationFailureException("User Not Registered");
@@ -274,23 +272,39 @@ public class MintoServiceImpl implements MintoService {
         catch (Exception e) {
             throw new AuthenticationFailureException("Login Failed");
         }
-        if (result != null && result.getBody() != null) {
-        	Map<String, Object> responseMap = (java.util.Map<String, Object>) result.getBody();
-        	Boolean isIdentical = (Boolean) responseMap.get("isIdentical");
-        	if (isIdentical != null && isIdentical) {
-        		confirmLoginStatusDTO = new ConfirmLoginStatusDTO();
-        		confirmLoginStatusDTO.setMessage("Authentication Successful");
-        		mapEntityToDTO(user, confirmLoginStatusDTO);
-        	}
-        	else {
-                throw new AuthenticationFailureException("Face ID Not Matched");
-            }
-        }
-        else {
-            throw new AuthenticationFailureException("Face ID Authentication Failed");
-        }
+        
         return confirmLoginStatusDTO;
     }
+
+	private boolean isFaceMatched(String faceId, User user) throws AuthenticationFailureException {
+		Boolean isIdentical = null;
+		if (user != null) {
+			String faceID1 = user.getFaceID();
+		    HttpHeaders headers = new HttpHeaders();
+		    MediaType mediaType = new MediaType("application", "json");
+		    headers.setContentType(mediaType);
+		    headers.set("Ocp-Apim-Subscription-Key", ConfigReader.getFaceAPISubscriptionKey());
+		    String requestJson = "{\"faceId1\": \"" + faceID1 + "\",\"faceId2\": \"" + faceId + "\"}";
+		    HttpEntity<String> entity = new HttpEntity<String>(requestJson, headers);
+		    ResponseEntity<Object> result = null;
+		    try {
+		        result = restTemplate.exchange(ConfigReader.getMicrosoftFaceAPI(), HttpMethod.POST, entity,
+		            Object.class);
+		    }
+		    catch (RestClientException e) {
+		    	e.printStackTrace();
+		        throw new AuthenticationFailureException("Couldn't match face");
+		    }
+		    if (result != null && result.getBody() != null) {
+		    	Map<String, Object> responseMap = (java.util.Map<String, Object>) result.getBody();
+		    	isIdentical = (Boolean) responseMap.get("isIdentical");
+		    }
+		    else {
+		        throw new AuthenticationFailureException("Face ID Authentication Failed");
+		    }
+		}
+		return (isIdentical != null && isIdentical) ;
+	}
 
     /**
      * Description : <<WRITE DESCRIPTION HERE>>
@@ -341,7 +355,7 @@ public class MintoServiceImpl implements MintoService {
      */
     @Override
     public ConfirmBalance getUserBalance(String emailID) throws InvalidRequestException {
-    	Optional<String> walletID = userDAO.getWalletID(emailID.toUpperCase());
+    	Optional<String> walletID = userDAO.getWalletID(emailID.toLowerCase());
     	if (walletID.isPresent()) {
     		return getBalance(walletID.get());
     	}
@@ -422,7 +436,7 @@ public class MintoServiceImpl implements MintoService {
             result = restTemplate.exchange(ConfigReader.getWalletCreationURL(), HttpMethod.POST, entity, Object.class);
             if (result != null && result.getBody() != null) {
                 Map<String, String> responseMap = (Map<String, String>) result.getBody();
-                confirmWID = new ConfirmWalletID(responseMap.get("address"));
+                confirmWID = new ConfirmWalletID("0x" + responseMap.get("address"));
             }
         }
         catch (RestClientException e) {
@@ -473,35 +487,49 @@ public class MintoServiceImpl implements MintoService {
      * @throws InvalidRequestException
      */
     @Override
-    public ReconciliationReport generateReconciliationReport(String emailID) throws InvalidRequestException {
-        ReconciliationReport report = new ReconciliationReport();
-        ConfirmBalance sabreBalance = null;
-        ConfirmBalance uberBalance = null;
-        ConfirmBalance marriotBalance = null;
-        ConfirmBalance deltaBalance = null;
-        switch (emailID) {
-            case "sabre.admin@sabrepay.com":
-                sabreBalance = getUserBalance("sabre.admin@sabrepay.com");
-                uberBalance = getUserBalance("uber.cabs@sabrepay.com");
-                marriotBalance = getUserBalance("marriot.hotel@sabrepay.com");
-                deltaBalance = getUserBalance("delta.airlines@sabrepay.com");
-                break;
-            case "uber.cabs@sabrepay.com":
-                uberBalance = getUserBalance("uber.cabs@sabrepay.com");
-                break;
-            case "marriot.hotel@sabrepay.com":
-                marriotBalance = getUserBalance("marriot.hotel@sabrepay.com");
-                break;
-            case "delta.airlines@sabrepay.com":
-                deltaBalance = getUserBalance("delta.airlines@sabrepay.com");
-                break;
-        }
-        report.setDeltaBalance(deltaBalance != null ? deltaBalance.getBalance() : null);
-        report.setMarriotBalance(marriotBalance != null ? marriotBalance.getBalance() : null);
-        report.setSabreBalance(sabreBalance != null ? sabreBalance.getBalance() : null);
-        report.setUberBalance(uberBalance != null ? uberBalance.getBalance() : null);
-        return report;
-    }
+	public ReconciliationReport generateReconciliationReport(String emailID) throws InvalidRequestException {
+		ReconciliationReport report = new ReconciliationReport();
+		ConfirmBalance sabreBalance = null;
+		ConfirmBalance uberBalance = null;
+		ConfirmBalance marriotBalance = null;
+		ConfirmBalance deltaBalance = null;
+		ConfirmBalance insuranceBalance = null;
+
+		switch (emailID) {
+		case "admin":
+			sabreBalance = getUserBalance("admin@mpay.com");
+			uberBalance = getUserBalance("car@mpay.com");
+			marriotBalance = getUserBalance("hotel@mpay.com");
+			deltaBalance = getUserBalance("airline@mpay.com");
+			insuranceBalance = getUserBalance("insurance@mpay.com");
+			break;
+		case "admin@mpay.com":
+			sabreBalance = getUserBalance("admin@mpay.com");
+			uberBalance = getUserBalance("car@mpay.com");
+			marriotBalance = getUserBalance("hotel@mpay.com");
+			deltaBalance = getUserBalance("airline@mpay.com");
+			insuranceBalance = getUserBalance("insurance@mpay.com");
+			break;
+		case "car@mpay.com":
+			uberBalance = getUserBalance(emailID);
+			break;
+		case "hotel@mpay.com":
+			marriotBalance = getUserBalance(emailID);
+			break;
+		case "airline@mpay.com":
+			deltaBalance = getUserBalance(emailID);
+			break;
+		case "insurance@mpay.com":
+			insuranceBalance = getUserBalance(emailID);
+			break;
+		}
+		report.setDeltaBalance(deltaBalance != null ? deltaBalance.getBalance() : null);
+		report.setMarriotBalance(marriotBalance != null ? marriotBalance.getBalance() : null);
+		report.setSabreBalance(sabreBalance != null ? sabreBalance.getBalance() : null);
+		report.setUberBalance(uberBalance != null ? uberBalance.getBalance() : null);
+		report.setMakeMyTripBalance(insuranceBalance != null ? insuranceBalance.getBalance() : null);
+		return report;
+	}
 
     /**
      * Description : <<WRITE DESCRIPTION HERE>>
@@ -560,18 +588,21 @@ public class MintoServiceImpl implements MintoService {
     
     @Override
 	public ConfirmBooking processBooking(PackageDTO packageDTO) throws AuthenticationFailureException, InvalidRequestException, TransferFailureException {
-    	String email = packageDTO.getEmail();
-    	User user = findUser(email);
+    	User user = findUser(packageDTO.getEmail());
     	if (user != null && user.getWalletID() != null) {
-    		ConfirmBalance balance = getBalance(user.getWalletID());
-    		if (Integer.valueOf(balance.getBalance()) > packageDTO.getTotal()) {
-    			transferFunds(packageDTO, user.getWalletID());
-    			addTravelInfo(user, packageDTO.getTravelInfo());
-    			createBookings(packageDTO, user);
-    		}
-    		else {
-    			throw new TransferFailureException("Insufficient Funds");
-    		}
+			if (isFaceMatched(packageDTO.getFaceId(), user)) {
+				ConfirmBalance balance = getBalance(user.getWalletID());
+				if (Integer.valueOf(balance.getBalance()) > packageDTO.getTotal()) {
+					transferFunds(packageDTO, user.getWalletID());
+					addTravelInfo(user, packageDTO.getTravelInfo());
+					createBookings(packageDTO, user);
+				} else {
+					throw new TransferFailureException("Insufficient Funds");
+				}
+			}
+			else {
+				throw new AuthenticationFailureException("Face ID Not Matched");
+			}
     	}
     	
 		return new ConfirmBooking("Booking successfull");
@@ -814,8 +845,15 @@ public class MintoServiceImpl implements MintoService {
 				travellerDTO.setIssuingDate(traveller.getIssueDate());
 				travellerDTO.setExpiryDate(traveller.getExpiryDate());
 				travellerDTOs.add(travellerDTO);
+				userDTO.setPrimaryUser(travellerDTO);
 			}
 		}
+	}
+
+	@Override
+	public ReconcileReports generateReconcileReport(String emailID) throws InvalidRequestException {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 }

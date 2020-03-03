@@ -15,9 +15,9 @@ import com.mindtree.minto.dto.ConfirmBooking;
 import com.mindtree.minto.dto.ConfirmLoginStatusDTO;
 import com.mindtree.minto.dto.ConfirmUserDTO;
 import com.mindtree.minto.dto.ConfirmWalletID;
-import com.mindtree.minto.dto.FaceIdDTO;
 import com.mindtree.minto.dto.LoginDTO;
 import com.mindtree.minto.dto.PackageDTO;
+import com.mindtree.minto.dto.ReconcileReports;
 import com.mindtree.minto.dto.ReconciliationReport;
 import com.mindtree.minto.dto.RegisterUserDTO;
 import com.mindtree.minto.dto.Transactions;
@@ -113,6 +113,16 @@ public interface MintoService {
      */
     ReconciliationReport generateReconciliationReport(String emailID) throws InvalidRequestException;
 
+    /**
+     * Description : 
+     * <<WRITE DESCRIPTION HERE>>
+     * 
+     * @return
+     * @throws InvalidRequestException 
+     */
+    ReconcileReports generateReconcileReport(String emailID) throws InvalidRequestException;
+
+    
     /**
      * Description : 
      * <<WRITE DESCRIPTION HERE>>

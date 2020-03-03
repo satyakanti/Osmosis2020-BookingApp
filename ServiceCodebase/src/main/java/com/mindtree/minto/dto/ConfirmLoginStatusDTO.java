@@ -3,8 +3,6 @@
  */
 package com.mindtree.minto.dto;
 
-import java.util.Date;
-
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 /**

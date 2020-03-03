@@ -35,8 +35,72 @@ public class ConfigReader {
     private static String faceAPISubscriptionKey;
     
     private static String walletCreationURL;
-
+    
+    private static String admin;
+    
+    private static String car;
+    
+    private static String hotel;
+    
+    private static String flight;
+    
     /**
+	 * @return the car
+	 */
+	public static String getCar() {
+		return car;
+	}
+
+	/**
+	 * @param car the car to set
+	 */
+	public static void setCar(String car) {
+		ConfigReader.car = car;
+	}
+
+	/**
+	 * @return the hotel
+	 */
+	public static String getHotel() {
+		return hotel;
+	}
+
+	/**
+	 * @param hotel the hotel to set
+	 */
+	public static void setHotel(String hotel) {
+		ConfigReader.hotel = hotel;
+	}
+
+	/**
+	 * @return the flight
+	 */
+	public static String getFlight() {
+		return flight;
+	}
+
+	/**
+	 * @param flight the flight to set
+	 */
+	public static void setFlight(String flight) {
+		ConfigReader.flight = flight;
+	}
+
+	/**
+	 * @return the admin
+	 */
+	public static String getAdmin() {
+		return admin;
+	}
+
+	/**
+	 * @param admin the admin to set
+	 */
+	public static void setAdmin(String admin) {
+		ConfigReader.admin = admin;
+	}
+
+	/**
      * @return the pwdEncryption
      */
     public static String getPwdEncryption() {

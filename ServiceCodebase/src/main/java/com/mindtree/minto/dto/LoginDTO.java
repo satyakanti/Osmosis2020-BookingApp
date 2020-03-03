@@ -6,6 +6,7 @@ package com.mindtree.minto.dto;
 import javax.validation.constraints.Email;
 import javax.validation.constraints.NotNull;
 
+import com.mindtree.minto.util.CommonUtil;
 import com.mindtree.minto.util.PasswordEncryptionUtil;
 
 /**
@@ -23,10 +24,21 @@ public class LoginDTO {
     /**
      * password
      */
-    @NotNull
     private String password;
-
     /**
+     * faceId
+     */
+    private String faceId;
+    
+    public String getFaceId() {
+		return faceId;
+	}
+
+	public void setFaceId(String faceId) {
+		this.faceId = faceId;
+	}
+
+	/**
      * @return the email
      */
     public String getEmail() {
@@ -38,7 +50,7 @@ public class LoginDTO {
      *            the email to set
      */
     public void setEmail(String email) {
-        this.email = email;
+        this.email = CommonUtil.toLowerCase(email);
     }
 
     /**

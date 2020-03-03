@@ -34,7 +34,7 @@ public class TravelInfo {
      * travelInfo
      */
     @Lob
-    @Column(name = "TRAVEL_INFO", columnDefinition="BLOB")
+    @Column(name = "TRAVEL_INFO")
     private byte[] travelInfo;
 
 	public Integer getTravelId() {

@@ -28,7 +28,7 @@ public class FlightItinerary {
 	private String destinationCity;
 	private String arrivalTime;
 	private Integer arrivalOffset;
-	private Integer journeyDuration;
+	private String journeyDuration;
 	@JsonInclude(JsonInclude.Include.NON_EMPTY)
 	private List<String> layoverPorts;
 	@JsonInclude(JsonInclude.Include.NON_EMPTY)
@@ -39,6 +39,7 @@ public class FlightItinerary {
 	private List<String> layoverAirportNames;
 	@JsonInclude(JsonInclude.Include.NON_EMPTY)
 	private List<FlightInfo> flightInfos;
+	private String partner;
 	
 	/**
 	 * @return the arrivalOffset
@@ -187,16 +188,15 @@ public class FlightItinerary {
 	/**
 	 * @return the journeyDuration
 	 */
-	public Integer getJourneyDuration() {
+	public String getJourneyDuration() {
 		return journeyDuration;
 	}
 	/**
 	 * @param journeyDuration the journeyDuration to set
 	 */
-	public void setJourneyDuration(Integer journeyDuration) {
+	public void setJourneyDuration(String journeyDuration) {
 		this.journeyDuration = journeyDuration;
 	}
-	
 	/**
 	 * @return the layoverPorts
 	 */
@@ -257,5 +257,17 @@ public class FlightItinerary {
 	public void setFlightInfos(List<FlightInfo> flightInfos) {
 		this.flightInfos = flightInfos;
 	}
-
+	/**
+	 * @return the partner
+	 */
+	public String getPartner() {
+		return partner;
+	}
+	/**
+	 * @param partner the partner to set
+	 */
+	public void setPartner(String partner) {
+		this.partner = partner;
+	}
+	
 }
