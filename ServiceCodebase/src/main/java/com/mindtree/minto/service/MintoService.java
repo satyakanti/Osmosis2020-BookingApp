@@ -21,6 +21,7 @@ import com.mindtree.minto.dto.ReconcileReports;
 import com.mindtree.minto.dto.ReconciliationReport;
 import com.mindtree.minto.dto.RegisterUserDTO;
 import com.mindtree.minto.dto.Transactions;
+import com.mindtree.minto.dto.TravelInfoDTO;
 import com.mindtree.minto.dto.UserDTO;
 import com.mindtree.minto.exception.AuthenticationFailureException;
 import com.mindtree.minto.exception.InvalidRequestException;
@@ -144,7 +145,7 @@ public interface MintoService {
      * @param email
      * @return String
      */
-    List<String> getTravelInfo(String email);
+    List<TravelInfoDTO> getTravelInfo(String email);
     /**
      * @param date
      * @return Booking

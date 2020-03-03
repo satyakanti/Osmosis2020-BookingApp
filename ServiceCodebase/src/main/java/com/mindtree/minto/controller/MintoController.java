@@ -28,6 +28,7 @@ import com.mindtree.minto.dto.LoginDTO;
 import com.mindtree.minto.dto.PackageDTO;
 import com.mindtree.minto.dto.ReconciliationReport;
 import com.mindtree.minto.dto.RegisterUserDTO;
+import com.mindtree.minto.dto.TravelInfoDTO;
 import com.mindtree.minto.dto.UserDTO;
 import com.mindtree.minto.exception.AuthenticationFailureException;
 import com.mindtree.minto.exception.InvalidRequestException;
@@ -172,9 +173,9 @@ public class MintoController {
     
     @ApiOperation(value = "")
     @GetMapping(value = "/api/getTravleInfo/{emailID}")
-    public ResponseEntity<List<String>> getTravleInfo(@PathVariable("emailID") String emailID) {
-        List<String> travelInfos = mintoService.getTravelInfo(emailID.toLowerCase());
-        return new ResponseEntity<List<String>>(travelInfos, HttpStatus.OK);
+    public ResponseEntity<List<TravelInfoDTO>> getTravleInfo(@PathVariable("emailID") String emailID) {
+        List<TravelInfoDTO> travelInfos = mintoService.getTravelInfo(emailID.toLowerCase());
+        return new ResponseEntity<List<TravelInfoDTO>>(travelInfos, HttpStatus.OK);
     }
     
     @ApiOperation(value = "")

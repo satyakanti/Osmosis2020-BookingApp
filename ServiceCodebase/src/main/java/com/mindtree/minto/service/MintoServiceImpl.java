@@ -613,8 +613,10 @@ public class MintoServiceImpl implements MintoService {
 	 * @param user
 	 */
 	public void createBookings(PackageDTO packageDTO, User user) {
-		createBooking(user, packageDTO.getFlight().getOfferPack().getOnwardFlightItinerary());
-		createBooking(user, packageDTO.getFlight().getOfferPack().getReturnFlightItinerary());
+		if (packageDTO.getFlight() != null && packageDTO.getFlight().getOfferPack() != null) {
+			createBooking(user, packageDTO.getFlight().getOfferPack().getOnwardFlightItinerary());
+			createBooking(user, packageDTO.getFlight().getOfferPack().getReturnFlightItinerary());
+		}
 	}
 
 	/**
@@ -755,11 +757,14 @@ public class MintoServiceImpl implements MintoService {
     }
 
 	@Override
-	public List<String> getTravelInfo(String email) {
-		List<String> travelInfoList = new ArrayList<String>();
-		List<byte[]> travelInfos = userDAO.getTravelInfos(email);
-		for (byte[] travelInfo : travelInfos) {
-			travelInfoList.add(new String(travelInfo));
+	public List<TravelInfoDTO> getTravelInfo(String email) {
+		List<TravelInfoDTO> travelInfoList = new ArrayList<TravelInfoDTO>();
+		List<Object[]> travelInfos = userDAO.getTravelInfos(email);
+		for (Object[] travelInfo : travelInfos) {
+			TravelInfoDTO travelInfoDTO = new TravelInfoDTO();
+			travelInfoDTO.setId((Integer)travelInfo[0]);
+			travelInfoDTO.setTravelInfo(new String((byte[]) travelInfo[1]));
+			travelInfoList.add(travelInfoDTO);
 		}
 		return travelInfoList;
 	}
@@ -819,16 +824,15 @@ public class MintoServiceImpl implements MintoService {
 		userDTO.setLastName(user.getLastName());
 		userDTO.setUserRole(user.getUserRole());
 		userDTO.setWalletID(user.getWalletID());
-		if (user.getTravelInfos() != null && !user.getTravelInfos().isEmpty()) {
-			List<TravelInfoDTO> travelInfoDTOs = new ArrayList<TravelInfoDTO>();
-			userDTO.setTravelInfos(travelInfoDTOs);
-			for (TravelInfo travelInfo : user.getTravelInfos()) {
-				TravelInfoDTO travelInfoDTO = new TravelInfoDTO();
-				travelInfoDTO.setTravelId(travelInfo.getTravelId());
-				travelInfoDTO.setTravelInfo(new String(travelInfo.getTravelInfo()));
-				travelInfoDTOs.add(travelInfoDTO);
-			}
-		}
+		/*
+		 * if (user.getTravelInfos() != null && !user.getTravelInfos().isEmpty()) {
+		 * List<TravelInfoDTO> travelInfoDTOs = new ArrayList<TravelInfoDTO>();
+		 * userDTO.setTravelInfos(travelInfoDTOs); for (TravelInfo travelInfo :
+		 * user.getTravelInfos()) { TravelInfoDTO travelInfoDTO = new TravelInfoDTO();
+		 * travelInfoDTO.setTravelId(travelInfo.getTravelId());
+		 * travelInfoDTO.setTravelInfo(new String(travelInfo.getTravelInfo()));
+		 * travelInfoDTOs.add(travelInfoDTO); } }
+		 */
 		if (user.getTravellers() != null && !user.getTravellers().isEmpty()) {
 			List<TravellerDTO> travellerDTOs = new ArrayList<TravellerDTO>();
 			userDTO.setTravellers(travellerDTOs);

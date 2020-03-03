@@ -5,17 +5,10 @@ package com.mindtree.minto.dto;
 
 public class TravelInfoDTO {
 
-    private Integer travelId;
+    private Integer id;
     
     private String travelInfo;
 
-	public Integer getTravelId() {
-		return travelId;
-	}
-
-	public void setTravelId(Integer travelId) {
-		this.travelId = travelId;
-	}
 
 	public String getTravelInfo() {
 		return travelInfo;
@@ -24,12 +17,20 @@ public class TravelInfoDTO {
 	public void setTravelInfo(String travelInfo) {
 		this.travelInfo = travelInfo;
 	}
+	
+	public Integer getId() {
+		return id;
+	}
+
+	public void setId(Integer id) {
+		this.id = id;
+	}
 
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + ((travelId == null) ? 0 : travelId.hashCode());
+		result = prime * result + ((id == null) ? 0 : id.hashCode());
 		return result;
 	}
 
@@ -42,10 +43,10 @@ public class TravelInfoDTO {
 		if (getClass() != obj.getClass())
 			return false;
 		TravelInfoDTO other = (TravelInfoDTO) obj;
-		if (travelId == null) {
-			if (other.travelId != null)
+		if (id == null) {
+			if (other.id != null)
 				return false;
-		} else if (!travelId.equals(other.travelId))
+		} else if (!id.equals(other.id))
 			return false;
 		return true;
 	}

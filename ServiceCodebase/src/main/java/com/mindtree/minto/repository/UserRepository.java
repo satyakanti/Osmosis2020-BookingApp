@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import com.mindtree.minto.model.TravelInfo;
 import com.mindtree.minto.model.User;
 
 /**
@@ -30,8 +31,8 @@ public interface UserRepository extends JpaRepository<User, Integer> {
     @Query(value = "select u.wallet_id from USER_INFORMATION u where u.LAST_NAME = :name", nativeQuery = true)
     Optional<String> getWalletIDByName(@Param("name") String email);
     
-    @Query(value = "select ti.TRAVEL_INFO from TRAVEL_INFORMATION ti, USER_INFORMATION u where u.EMAIL_ID = :email and u.USER_ID = ti.USER_ID" , nativeQuery = true)
-    List<byte[]> getTravelInfos(@Param("email") String email);
+    @Query(value = "select ti.TRAVE_ID, ti.TRAVEL_INFO from TRAVEL_INFORMATION ti, USER_INFORMATION u where u.EMAIL_ID = :email and u.USER_ID = ti.USER_ID" , nativeQuery = true)
+    List<Object[]> getTravelInfos(@Param("email") String email);
     
     @Query("from USER_INFORMATION u where u.email = :email")
     List<User> getUsers(@Param("email") String email);
