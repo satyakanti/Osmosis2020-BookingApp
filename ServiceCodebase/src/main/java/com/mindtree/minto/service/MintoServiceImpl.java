@@ -794,6 +794,7 @@ public class MintoServiceImpl implements MintoService {
 				bookingDTO.setFirstName(booking.getFirstName());
 				bookingDTO.setLastName(booking.getLastName());
 				bookingDTO.setFlight(booking.getFlightdetails());
+				bookingDTO.setBagTags(booking.getBagTags());
 				bookingDTO.setDateOfFirstSegment(sdf.format(booking.getDateOfFirstSegment()));
 				bookingDTO.setNumberOfCheckedInBags(booking.getNumberOfCheckedInBags());
 				bookingDTOs.add(bookingDTO);

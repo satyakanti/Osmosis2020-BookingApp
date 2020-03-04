@@ -63,6 +63,17 @@ public class Booking {
      */
     @Column(name = "FLIGHT_DETAILS")
 	private String flightdetails;
+    
+    @Column(name = "BAG_TAG_IDS")
+    private String bagTags; 
+
+	public String getBagTags() {
+		return bagTags;
+	}
+
+	public void setBagTags(String bagTags) {
+		this.bagTags = bagTags;
+	}
 
 	public Integer getBookingId() {
 		return bookingId;

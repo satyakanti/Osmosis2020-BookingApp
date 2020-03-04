@@ -19,6 +19,14 @@ public class BookingDTO {
 	private Integer numberOfCheckedInBags;
 	private String dateOfFirstSegment;
 	private String flight;
+	private String bagTags;
+	
+	public String getBagTags() {
+		return bagTags;
+	}
+	public void setBagTags(String bagTags) {
+		this.bagTags = bagTags;
+	}
 	public String getEmail() {
 		return email;
 	}
