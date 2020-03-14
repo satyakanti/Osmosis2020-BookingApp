@@ -3,6 +3,9 @@
  */
 package com.mindtree.minto.model;
 
+import java.util.Set;
+
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
@@ -10,6 +13,7 @@ import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
+import javax.persistence.OneToMany;
 
 /**
  * 
@@ -37,12 +41,27 @@ public class TravelInfo {
     @Column(name = "TRAVEL_INFO")
     private byte[] travelInfo;
 
+    @OneToMany(
+    		mappedBy="travelInfo",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+        )
+    private Set<ExpenseInfo> expenseInfos;
+
 	public Integer getTravelId() {
 		return travelId;
 	}
 
 	public void setTravelId(Integer travelId) {
 		this.travelId = travelId;
+	}
+
+	public User getUser() {
+		return user;
+	}
+
+	public void setUser(User user) {
+		this.user = user;
 	}
 
 	public byte[] getTravelInfo() {
@@ -52,13 +71,13 @@ public class TravelInfo {
 	public void setTravelInfo(byte[] travelInfo) {
 		this.travelInfo = travelInfo;
 	}
-	
-	public User getUser() {
-		return user;
+
+	public Set<ExpenseInfo> getExpenseInfos() {
+		return expenseInfos;
 	}
 
-	public void setUser(User user) {
-		this.user = user;
+	public void setExpenseInfos(Set<ExpenseInfo> expenseInfos) {
+		this.expenseInfos = expenseInfos;
 	}
 
 	@Override

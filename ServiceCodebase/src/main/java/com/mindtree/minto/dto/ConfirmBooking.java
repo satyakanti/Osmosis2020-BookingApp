@@ -10,16 +10,32 @@ package com.mindtree.minto.dto;
 public class ConfirmBooking {
 
     private String message;
-
-    /**
-     * @param message
-     */
-    public ConfirmBooking(String message) {
+    private String transactionId;
+    
+    public ConfirmBooking(String message, String transactionId) {
         super();
         this.message = message;
+        this.transactionId = transactionId;
     }
+    
+    public ConfirmBooking(String message) {
+    	super();
+        this.message = message;
+	}
 
-    /**
+	public String getTransactionId() {
+		return transactionId;
+	}
+
+
+
+	public void setTransactionId(String transactionId) {
+		this.transactionId = transactionId;
+	}
+
+
+
+	/**
      * @return the message
      */
     public String getMessage() {

@@ -17,6 +17,7 @@ import com.mindtree.minto.dto.ConfirmUserDTO;
 import com.mindtree.minto.dto.ConfirmWalletID;
 import com.mindtree.minto.dto.LoginDTO;
 import com.mindtree.minto.dto.PackageDTO;
+import com.mindtree.minto.dto.PaymentDTO;
 import com.mindtree.minto.dto.ReconcileReports;
 import com.mindtree.minto.dto.ReconciliationReport;
 import com.mindtree.minto.dto.RegisterUserDTO;
@@ -153,5 +154,7 @@ public interface MintoService {
     List<BookingDTO> getBookings(String date);
     
     UserDTO getUser(String email) throws AuthenticationFailureException;
+
+	ConfirmBooking makePayment(@Valid PaymentDTO paymentDTO) throws AuthenticationFailureException, InvalidRequestException, TransferFailureException;
 
 }

@@ -7,6 +7,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -38,6 +39,7 @@ import com.mindtree.minto.dto.FlightItinerary;
 import com.mindtree.minto.dto.LoginDTO;
 import com.mindtree.minto.dto.PackageBookingDTO;
 import com.mindtree.minto.dto.PackageDTO;
+import com.mindtree.minto.dto.PaymentDTO;
 import com.mindtree.minto.dto.ReconcileReports;
 import com.mindtree.minto.dto.ReconciliationReport;
 import com.mindtree.minto.dto.RegisterUserDTO;
@@ -587,15 +589,35 @@ public class MintoServiceImpl implements MintoService {
     }
     
     @Override
+	public ConfirmBooking makePayment(@Valid PaymentDTO paymentDTO)
+			throws AuthenticationFailureException, InvalidRequestException, TransferFailureException {
+    	User user = findUser(paymentDTO.getEmail());
+    	String transactionId = null;
+    	if (user != null && user.getWalletID() != null) {
+    		boolean isFaceIdMatched = isFaceMatched(paymentDTO.getFaceId(), user);
+    		if (isFaceIdMatched) {
+    			Optional<String> partnerWalletID = userDAO.getWalletIDByName(paymentDTO.getPartner());
+    			transferFunds(paymentDTO.getAmount(), user.getWalletID(), partnerWalletID.get());
+    		}
+    	}
+    	
+    	return new ConfirmBooking("Booking successfull", transactionId);
+	}
+
+    
+    @Override
 	public ConfirmBooking processBooking(PackageDTO packageDTO) throws AuthenticationFailureException, InvalidRequestException, TransferFailureException {
     	User user = findUser(packageDTO.getEmail());
+    	String transactionId = null;
     	if (user != null && user.getWalletID() != null) {
-			if (isFaceMatched(packageDTO.getFaceId(), user)) {
+    		boolean isFaceIdMatched = isFaceMatched(packageDTO.getFaceId(), user);
+			if (isFaceIdMatched) {
 				ConfirmBalance balance = getBalance(user.getWalletID());
 				if (Integer.valueOf(balance.getBalance()) > packageDTO.getTotal()) {
-					transferFunds(packageDTO, user.getWalletID());
+					transactionId = transferFundsToAdmin(packageDTO.getTotal(), user.getWalletID());
 					addTravelInfo(user, packageDTO.getTravelInfo());
 					createBookings(packageDTO, user);
+					processFundsToMerchants(packageDTO);
 				} else {
 					throw new TransferFailureException("Insufficient Funds");
 				}
@@ -605,7 +627,36 @@ public class MintoServiceImpl implements MintoService {
 			}
     	}
     	
-		return new ConfirmBooking("Booking successfull");
+		return new ConfirmBooking("Booking successfull", transactionId);
+	}
+
+	private void processFundsToMerchants(PackageDTO packageDTO) {
+		Thread th = new Thread(()->transferFunds(packageDTO));
+		th.start();
+	}
+
+	private String transferFundsToAdmin(Integer total, String walletId) throws TransferFailureException {
+		return transferFunds(total, walletId, ConfigReader.getMasterWalletID());
+	}
+
+	private String transferFunds(Integer total, String fromWalletId, String toWalletId)
+			throws TransferFailureException {
+		String transactionId = null;
+		String transferURL = createURL();
+    	LinkedHashMap<String, LinkedHashMap<String, Object>> result = null;
+    	try {
+    		result = (LinkedHashMap<String, LinkedHashMap<String, Object>>) restTemplate.postForObject(transferURL,
+    				createRequestJsonWithHeaders(fromWalletId, toWalletId, total), Object.class);
+    	}
+    	catch (Exception ex) {
+    		ex.printStackTrace();
+    		throw new TransferFailureException("Transfer Failed");
+    	}
+    	if (result != null && result.get("result") != null) {
+    		LinkedHashMap<String, Object> resultMap = result.get("result");
+    		transactionId = (String) resultMap.get("transactionHash");
+    	}
+		return transactionId;
 	}
 
 	/**
@@ -652,24 +703,18 @@ public class MintoServiceImpl implements MintoService {
 		return flightDetails;
 	}
 
-	private Booking constructBooking(User user) {
-		Booking booking = new Booking();
-		booking.setEmail(user.getEmail());
-		booking.setFirstName(user.getFirstName());
-		booking.setLastName(user.getLastName());
-		return booking;
-	}
-
 	private void addTravelInfo(User user, String travelInfoString) {
-		TravelInfo travelInfo = new TravelInfo();
-		travelInfo.setTravelInfo(travelInfoString.getBytes());
-		travelInfo.setUser(user);
-		if (user.getTravelInfos() == null) {
-			Set<TravelInfo> travelInfos = new HashSet<TravelInfo>();
-			user.setTravelInfos(travelInfos);
+		if (travelInfoString != null) {
+			TravelInfo travelInfo = new TravelInfo();
+			travelInfo.setTravelInfo(travelInfoString.getBytes());
+			travelInfo.setUser(user);
+			if (user.getTravelInfos() == null) {
+				Set<TravelInfo> travelInfos = new HashSet<TravelInfo>();
+				user.setTravelInfos(travelInfos);
+			}
+			user.getTravelInfos().add(travelInfo);
+			userDAO.save(user);
 		}
-		user.getTravelInfos().add(travelInfo);
-		userDAO.save(user);
 	}
 
 	private User findUser(String email) throws AuthenticationFailureException {
@@ -689,17 +734,16 @@ public class MintoServiceImpl implements MintoService {
 		return user;
 	}
 
-	private void transferFunds(PackageDTO packageDTO, String walletId) throws TransferFailureException {
-    	String transferURL = createURL();
+	private void transferFunds(PackageDTO packageDTO) {
+		String transferURL = createURL();
     	for (PackageBookingDTO bookingDTO : packageDTO.getBookings()) {
     		Optional<String> partnerWalletID = userDAO.getWalletIDByName(bookingDTO.getPartner());
     		try {
     			restTemplate.postForObject(transferURL,
-    					createRequestJsonWithHeaders(walletId, partnerWalletID.get(), bookingDTO.getAmount()), Object.class);
+    					createRequestJsonWithHeaders(ConfigReader.getMasterWalletID(), partnerWalletID.get(), bookingDTO.getAmount()), Object.class);
     		}
     		catch (Exception ex) {
     			ex.printStackTrace();
-    			throw new TransferFailureException("Transfer Filed");
     		}
     	}
 	}
