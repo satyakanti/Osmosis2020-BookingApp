@@ -23,6 +23,7 @@ import com.mindtree.minto.dto.ConfirmBooking;
 import com.mindtree.minto.dto.ConfirmLoginStatusDTO;
 import com.mindtree.minto.dto.ConfirmUserDTO;
 import com.mindtree.minto.dto.ConfirmWalletID;
+import com.mindtree.minto.dto.ExpenseDTO;
 import com.mindtree.minto.dto.FaceIdDTO;
 import com.mindtree.minto.dto.LoginDTO;
 import com.mindtree.minto.dto.PackageDTO;
@@ -39,6 +40,7 @@ import com.mindtree.minto.service.MintoService;
 
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
+import net.sourceforge.tess4j.TesseractException;
 
 /**
  * 
@@ -178,6 +180,14 @@ public class MintoController {
         throws AuthenticationFailureException, InvalidRequestException, TransferFailureException {
     	ConfirmBooking confirmBooking = mintoService.makePayment(paymentDTO);
         return new ResponseEntity<ConfirmBooking>(confirmBooking, HttpStatus.OK);
+
+    }
+    
+    @ApiOperation(value = "add expense", response = ConfirmBooking.class)
+    @PostMapping(value = "/api/expense")
+    public ResponseEntity<String> addExpense(@RequestBody @Valid List<ExpenseDTO> expenses) throws InvalidRequestException, TesseractException {
+    	mintoService.addExpense(expenses);
+        return new ResponseEntity<String>("Expense Claimed Successfully!!", HttpStatus.OK);
 
     }
     

@@ -15,6 +15,7 @@ import com.mindtree.minto.dto.ConfirmBooking;
 import com.mindtree.minto.dto.ConfirmLoginStatusDTO;
 import com.mindtree.minto.dto.ConfirmUserDTO;
 import com.mindtree.minto.dto.ConfirmWalletID;
+import com.mindtree.minto.dto.ExpenseDTO;
 import com.mindtree.minto.dto.LoginDTO;
 import com.mindtree.minto.dto.PackageDTO;
 import com.mindtree.minto.dto.PaymentDTO;
@@ -28,6 +29,8 @@ import com.mindtree.minto.exception.AuthenticationFailureException;
 import com.mindtree.minto.exception.InvalidRequestException;
 import com.mindtree.minto.exception.RegistrationException;
 import com.mindtree.minto.exception.TransferFailureException;
+
+import net.sourceforge.tess4j.TesseractException;
 
 /**
  * 
@@ -156,5 +159,7 @@ public interface MintoService {
     UserDTO getUser(String email) throws AuthenticationFailureException;
 
 	ConfirmBooking makePayment(@Valid PaymentDTO paymentDTO) throws AuthenticationFailureException, InvalidRequestException, TransferFailureException;
+
+	void addExpense(@Valid List<ExpenseDTO> expenses) throws InvalidRequestException, TesseractException;
 
 }

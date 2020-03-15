@@ -43,6 +43,28 @@ public class ExpenseInfo {
     @Temporal(TemporalType.DATE)
     @Column(name = "DATE_OF_CLAIM")
     private Date dateOfClaim;
+    
+    @Column(name = "DESCRIPTION")
+    private String description;
+    
+    @Column(name = "AMOUNT")
+    private String amount;
+
+	public String getDescription() {
+		return description;
+	}
+
+	public void setDescription(String description) {
+		this.description = description;
+	}
+
+	public String getAmount() {
+		return amount;
+	}
+
+	public void setAmount(String amount) {
+		this.amount = amount;
+	}
 
 	public Integer getExpenselId() {
 		return expenselId;

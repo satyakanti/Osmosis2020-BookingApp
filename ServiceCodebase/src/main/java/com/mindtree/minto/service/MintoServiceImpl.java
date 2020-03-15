@@ -3,19 +3,42 @@
  */
 package com.mindtree.minto.service;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.net.URL;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Base64;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.Set;
 
+import javax.activation.DataHandler;
+import javax.activation.DataSource;
+import javax.mail.BodyPart;
+import javax.mail.Message;
+import javax.mail.MessagingException;
+import javax.mail.Multipart;
+import javax.mail.PasswordAuthentication;
+import javax.mail.Session;
+import javax.mail.Transport;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeBodyPart;
+import javax.mail.internet.MimeMessage;
+import javax.mail.internet.MimeMultipart;
+import javax.mail.util.ByteArrayDataSource;
 import javax.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -33,9 +56,14 @@ import com.mindtree.minto.dto.ConfirmBooking;
 import com.mindtree.minto.dto.ConfirmLoginStatusDTO;
 import com.mindtree.minto.dto.ConfirmUserDTO;
 import com.mindtree.minto.dto.ConfirmWalletID;
+import com.mindtree.minto.dto.Detail;
+import com.mindtree.minto.dto.DetailType;
 import com.mindtree.minto.dto.Events;
+import com.mindtree.minto.dto.ExpenseDTO;
 import com.mindtree.minto.dto.FlightInfo;
 import com.mindtree.minto.dto.FlightItinerary;
+import com.mindtree.minto.dto.Invoice;
+import com.mindtree.minto.dto.InvoiceInfo;
 import com.mindtree.minto.dto.LoginDTO;
 import com.mindtree.minto.dto.PackageBookingDTO;
 import com.mindtree.minto.dto.PackageDTO;
@@ -53,25 +81,50 @@ import com.mindtree.minto.exception.InvalidRequestException;
 import com.mindtree.minto.exception.RegistrationException;
 import com.mindtree.minto.exception.TransferFailureException;
 import com.mindtree.minto.model.Booking;
+import com.mindtree.minto.model.ExpenseInfo;
 import com.mindtree.minto.model.TravelInfo;
 import com.mindtree.minto.model.Traveller;
 import com.mindtree.minto.model.User;
 import com.mindtree.minto.repository.BookingRepository;
+import com.mindtree.minto.repository.TravelInfoRepository;
 import com.mindtree.minto.repository.UserRepository;
 import com.mindtree.minto.util.ConfigReader;
+
+import lombok.extern.slf4j.Slf4j;
+import net.sf.jasperreports.engine.JREmptyDataSource;
+import net.sf.jasperreports.engine.JasperExportManager;
+import net.sf.jasperreports.engine.JasperFillManager;
+import net.sf.jasperreports.engine.JasperPrint;
+import net.sf.jasperreports.engine.JasperReport;
+import net.sf.jasperreports.engine.util.JRLoader;
+import net.sourceforge.tess4j.ITesseract;
+import net.sourceforge.tess4j.Tesseract;
+import net.sourceforge.tess4j.TesseractException;
 
 /**
  * 
  * MintoServiceImpl.java Created On: Feb 22, 2020 Created By: M1026329
  */
+@Slf4j
 @Service
 public class MintoServiceImpl implements MintoService {
 
+	  @Value("${app.smtp.username}")
+	    private String username;
+	    @Value("${app.smtp.password}")
+	    private String password;
+	    @Value("${app.smtp.port}")
+	    private String port;
+	    @Value("${app.smtp.host}")
+	    private String host;
     @Autowired
     UserRepository userDAO;
     
     @Autowired
     BookingRepository bookingDAO;
+    
+    @Autowired
+    TravelInfoRepository travelDAO;
 
     @Autowired
     RestTemplate restTemplate;
@@ -597,13 +650,72 @@ public class MintoServiceImpl implements MintoService {
     		boolean isFaceIdMatched = isFaceMatched(paymentDTO.getFaceId(), user);
     		if (isFaceIdMatched) {
     			Optional<String> partnerWalletID = userDAO.getWalletIDByName(paymentDTO.getPartner());
-    			transferFunds(paymentDTO.getAmount(), user.getWalletID(), partnerWalletID.get());
+    			transactionId = transferFunds(paymentDTO.getAmount(), user.getWalletID(), partnerWalletID.get());
     		}
     	}
     	
     	return new ConfirmBooking("Booking successfull", transactionId);
 	}
-
+    
+    private InvoiceInfo getInvoiceInfo(ExpenseDTO expense) throws TesseractException {
+		if (expense.getFileName() == null) {
+			return null;
+		}
+		File tempFile = new File(System.getProperty("java.io.tmpdir")+"/"+expense.getFileName());
+		try ( FileOutputStream fos = new FileOutputStream(tempFile); ) {
+		      byte[] decoder = Base64.getDecoder().decode(expense.getDocument().split(";base64,")[1]);
+		      fos.write(decoder);
+		      
+		    } catch (Exception e) {
+		      e.printStackTrace();
+		    }
+		ITesseract instance = new Tesseract();
+	      try 
+	      {	
+	    	  URL resource = getClass().getResource("/data");
+	    	 instance.setDatapath(resource.getPath().substring(1));
+	         return processImgeText(instance.doOCR(tempFile));
+	      } 
+	      finally {
+	    	  tempFile.delete();
+		}
+	}
+    
+    private InvoiceInfo processImgeText(String imgText) {
+		System.out.println(imgText);
+		InvoiceInfo resp = new InvoiceInfo();
+		String[] split = imgText.split("\n");
+		Optional<String> date = Arrays.stream(split).filter(str -> str.startsWith("Date : ")).findFirst();
+		if(date.isPresent()) {
+			SimpleDateFormat sf = new SimpleDateFormat("EEE, d MMM yyyy");
+			String substring = date.get().substring("Date : ".length());
+			try {
+				Date parse = sf.parse(substring.trim());
+				resp.setDate(parse);
+			} catch (ParseException e) {
+				log.error(e.getMessage());
+				e.printStackTrace();
+			}
+		}
+		
+		Optional<String> total = Arrays.stream(split).filter(str -> str.startsWith("Total Price: ")).findFirst();
+		if (total.isPresent()) {
+			resp.setAmmount(total.get().substring("Total Price: ".length()));
+		}
+		
+		Optional<String> txId = Arrays.stream(split).filter(str -> str.startsWith("Ref: ")).findFirst();
+		if (txId.isPresent()) {
+			resp.setAmmount(txId.get().substring("Ref: ".length()));
+		}
+		for (int i = split.length-1; i >= 0; i--) {
+			String str = split[i].trim();
+			if(str.startsWith("For")&& str.contains(":")) {
+				resp.setMerchant(str.substring(3,str.indexOf(':')-1).trim());
+				break;
+			}
+		}
+		return resp;
+	}
     
     @Override
 	public ConfirmBooking processBooking(PackageDTO packageDTO) throws AuthenticationFailureException, InvalidRequestException, TransferFailureException {
@@ -615,6 +727,14 @@ public class MintoServiceImpl implements MintoService {
 				ConfirmBalance balance = getBalance(user.getWalletID());
 				if (Integer.valueOf(balance.getBalance()) > packageDTO.getTotal()) {
 					transactionId = transferFundsToAdmin(packageDTO.getTotal(), user.getWalletID());
+					Invoice invoice = new Invoice();
+					for (PackageBookingDTO bookingDTO : packageDTO.getBookings()) {
+						Detail detail = new Detail();
+						detail.setType(DetailType.valueOf(bookingDTO.getPartner()));
+						
+						invoice.getDetails().add(detail);
+					}
+					
 					addTravelInfo(user, packageDTO.getTravelInfo());
 					createBookings(packageDTO, user);
 					processFundsToMerchants(packageDTO);
@@ -904,5 +1024,112 @@ public class MintoServiceImpl implements MintoService {
 		// TODO Auto-generated method stub
 		return null;
 	}
+
+	@Override
+	//@Async
+	public void addExpense(@Valid List<ExpenseDTO> expenses) throws InvalidRequestException, TesseractException {
+		TravelInfo travelInfo = null;
+		for (ExpenseDTO expenseDTO : expenses) {
+			if (travelInfo == null) {
+				travelInfo = getTravelInfo(expenseDTO.getTravelId());
+			}
+			if (travelInfo.getExpenseInfos() == null) {
+				travelInfo.setExpenseInfos(new HashSet<ExpenseInfo>());
+			}
+			ExpenseInfo expenseInfo = new ExpenseInfo();
+			expenseInfo.setDateOfClaim(new Date());
+			expenseInfo.setDescription(expenseDTO.getDescription());
+			InvoiceInfo invoiceInfo = getInvoiceInfo(expenseDTO);
+			if (invoiceInfo != null) {
+				expenseInfo.setDateOfExpense(invoiceInfo.getDate());
+				expenseInfo.setMerchantName(invoiceInfo.getMerchant());
+				expenseInfo.setTrasactionId(invoiceInfo.getTxnId());
+				expenseInfo.setAmount(invoiceInfo.getAmmount());
+			}
+			expenseInfo.setTravelInfo(travelInfo);
+			travelInfo.getExpenseInfos().add(expenseInfo);
+		}
+		travelDAO.save(travelInfo);
+	}
+
+	private TravelInfo getTravelInfo(Integer traveId) throws InvalidRequestException {
+		TravelInfo travelInfo = null;
+		Optional<TravelInfo> travelInfoFindById = travelDAO.findById(traveId);
+		if (travelInfoFindById.isPresent()) {
+			travelInfo = travelInfoFindById.get();
+		}
+		if (travelInfo == null) {
+			throw new InvalidRequestException("TravelInfo does not present");
+		}
+		return travelInfo;
+	}
+	
+	private byte[] createInvoice(Invoice invoice) {
+        try {
+
+ 
+
+            Map<String, Object> parameters = new HashMap<>();
+            parameters.put("order", invoice);
+            JasperReport report = (JasperReport) JRLoader
+                .loadObject(this.getClass().getResourceAsStream("/invoice.jasper"));
+            JasperPrint jasperPrint = JasperFillManager.fillReport(report, parameters, new JREmptyDataSource());
+            byte[] pdfReport = JasperExportManager.exportReportToPdf(jasperPrint);
+            return pdfReport;
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+	
+	private void sendMail(byte[] invoicePdf ,String email) {
+
+        
+
+        Properties props = new Properties();
+
+        props.put("mail.smtp.auth", "true");
+        props.put("mail.smtp.starttls.enable", "true");
+        props.put("mail.smtp.host", host);
+        props.put("mail.smtp.port", port);
+
+        // Get the Session object.
+        Session session = Session.getInstance(props, new javax.mail.Authenticator() {
+            protected PasswordAuthentication getPasswordAuthentication() {
+                return new PasswordAuthentication(username, password);
+            }
+        });
+
+        try {
+            Message message = new MimeMessage(session);
+            message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(email));
+
+            message.setSubject("Invoice From Swift Corporate  Booking" );
+
+            BodyPart messageBodyPart = new MimeBodyPart();
+
+            messageBodyPart.setText("Please Find the attached Invoice");
+
+            Multipart multipart = new MimeMultipart();
+
+            multipart.addBodyPart(messageBodyPart);
+
+            messageBodyPart = new MimeBodyPart();
+            DataSource source = new ByteArrayDataSource(invoicePdf, "application/pdf");
+            messageBodyPart.setDataHandler(new DataHandler(source));
+            messageBodyPart.setFileName("Invoice.pdf");
+            multipart.addBodyPart(messageBodyPart);
+
+            message.setContent(multipart);
+
+            Transport.send(message);
+
+        }
+        catch (MessagingException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
 
 }
