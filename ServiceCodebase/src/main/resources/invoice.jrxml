@@ -42,15 +42,14 @@
 		<field name="tax" class="java.lang.Double">
 			<fieldDescription><![CDATA[tax]]></fieldDescription>
 		</field>
-		<field name="type" class="com.example.ptest.model.DetailType">
+		<field name="type" class="com.mindtree.minto.dto.DetailType">
 			<fieldDescription><![CDATA[type]]></fieldDescription>
 		</field>
 		<field name="info" class="java.lang.String">
 			<fieldDescription><![CDATA[info]]></fieldDescription>
 		</field>
 	</subDataset>
-	<parameter name="invoice" class="com.example.ptest.model.Invoice"/>
-	<parameter name="details" class="net.sf.jasperreports.engine.data.JRBeanCollectionDataSource"/>
+	<parameter name="invoice" class="com.mindtree.minto.dto.Invoice"/>
 	<queryString>
 		<![CDATA[]]>
 	</queryString>
@@ -103,6 +102,14 @@ Bangalore 560059 (India)]]></text>
 					<font size="14"/>
 				</textElement>
 				<textFieldExpression><![CDATA["Date : " + $P{invoice}.getDate()]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="0" y="0" width="300" height="30" uuid="4b42d189-d9cd-4a04-bdd3-f848100c6586"/>
+				<box topPadding="4" leftPadding="4"/>
+				<textElement>
+					<font size="14"/>
+				</textElement>
+				<textFieldExpression><![CDATA["Ref: "+$P{invoice}.getTxnId()]]></textFieldExpression>
 			</textField>
 		</band>
 		<band height="30">
@@ -209,7 +216,7 @@ Bangalore 560059 (India)]]></text>
 				</reportElement>
 				<jr:table xmlns:jr="http://jasperreports.sourceforge.net/jasperreports/components" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports/components http://jasperreports.sourceforge.net/xsd/components.xsd" whenNoDataType="AllSectionsNoDetail">
 					<datasetRun subDataset="Dataset1" uuid="45465db1-250c-4084-b0c2-f812470e5704">
-						<dataSourceExpression><![CDATA[$P{details}]]></dataSourceExpression>
+						<dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($P{invoice}.getDetails())]]></dataSourceExpression>
 					</datasetRun>
 					<jr:column width="80" uuid="c41819c7-4c40-4e27-8756-e0892e893573">
 						<jr:columnHeader style="Table_CH" height="30">
@@ -367,7 +374,7 @@ Bangalore 560059 (India)]]></text>
 				<textElement textAlignment="Right">
 					<font size="12" isBold="true"/>
 				</textElement>
-				<text><![CDATA[For SwiftICorporate Booking : ]]></text>
+				<text><![CDATA[For Swift Corporate Booking :]]></text>
 			</staticText>
 			<line>
 				<reportElement x="0" y="0" width="555" height="1" uuid="f80761b5-3a40-43dd-aa8d-b9dc3b3b49d1">
