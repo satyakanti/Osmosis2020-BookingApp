@@ -103,11 +103,11 @@ Bangalore 560059 (India)]]></text>
 				</textElement>
 				<text><![CDATA[Booking Details]]></text>
 			</staticText>
-			<textField>
-				<reportElement x="0" y="0" width="300" height="30" uuid="4b42d189-d9cd-4a04-bdd3-f848100c6586"/>
+			<textField isBlankWhenNull="false">
+				<reportElement stretchType="ElementGroupBottom" x="0" y="0" width="555" height="30" uuid="4b42d189-d9cd-4a04-bdd3-f848100c6586"/>
 				<box topPadding="4" leftPadding="4"/>
 				<textElement>
-					<font size="14"/>
+					<font size="10" isBold="false"/>
 				</textElement>
 				<textFieldExpression><![CDATA["Ref: "+$P{invoice}.getTxnId()]]></textFieldExpression>
 			</textField>
