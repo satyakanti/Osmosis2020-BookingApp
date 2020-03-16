@@ -57,7 +57,7 @@
 		<band splitType="Stretch"/>
 	</background>
 	<title>
-		<band height="90" splitType="Stretch">
+		<band height="92" splitType="Stretch">
 			<staticText>
 				<reportElement x="320" y="0" width="237" height="80" uuid="6832656c-e951-43ca-84b0-0feb85df72dc"/>
 				<box topPadding="5" rightPadding="4"/>
@@ -72,6 +72,14 @@ Bangalore 560059 (India)]]></text>
 				<reportElement x="0" y="0" width="80" height="80" uuid="59ac8289-ddc8-41ab-a695-5f1b28b215f1"/>
 				<imageExpression><![CDATA["Capture.PNG"]]></imageExpression>
 			</image>
+			<textField>
+				<reportElement x="342" y="62" width="215" height="30" uuid="502f03cc-fb68-4821-96e8-c9f7c968fc7b"/>
+				<box rightPadding="4"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="14"/>
+				</textElement>
+				<textFieldExpression><![CDATA["Date : " + $P{invoice}.getDate()]]></textFieldExpression>
+			</textField>
 		</band>
 	</title>
 	<pageHeader>
@@ -95,14 +103,6 @@ Bangalore 560059 (India)]]></text>
 				</textElement>
 				<text><![CDATA[Booking Details]]></text>
 			</staticText>
-			<textField>
-				<reportElement x="340" y="0" width="215" height="30" uuid="502f03cc-fb68-4821-96e8-c9f7c968fc7b"/>
-				<box rightPadding="4"/>
-				<textElement textAlignment="Right" verticalAlignment="Middle">
-					<font size="14"/>
-				</textElement>
-				<textFieldExpression><![CDATA["Date : " + $P{invoice}.getDate()]]></textFieldExpression>
-			</textField>
 			<textField>
 				<reportElement x="0" y="0" width="300" height="30" uuid="4b42d189-d9cd-4a04-bdd3-f848100c6586"/>
 				<box topPadding="4" leftPadding="4"/>
