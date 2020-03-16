@@ -374,7 +374,7 @@ Bangalore 560059 (India)]]></text>
 				<textElement textAlignment="Right">
 					<font size="12" isBold="true"/>
 				</textElement>
-				<text><![CDATA[For Swift Corporate Booking :]]></text>
+				<text><![CDATA[For Swift Corporate Booking : ]]></text>
 			</staticText>
 			<line>
 				<reportElement x="0" y="0" width="555" height="1" uuid="f80761b5-3a40-43dd-aa8d-b9dc3b3b49d1">
