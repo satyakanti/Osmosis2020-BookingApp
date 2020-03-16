@@ -7,12 +7,17 @@ import java.util.Date;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
+
+import org.hibernate.annotations.Fetch;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 /**
  * 
@@ -26,6 +31,7 @@ public class ExpenseInfo {
     @Column(name = "EXPENSE_ID")
     private Integer expenselId;
     
+    @JsonIgnore
     @ManyToOne
     @JoinColumn(name="TRAVE_ID", nullable=false)
     private TravelInfo travelInfo;

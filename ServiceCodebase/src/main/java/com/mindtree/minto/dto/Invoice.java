@@ -8,10 +8,10 @@ import lombok.Data;
 public class Invoice {
     private String date;
     private double totalPrice;
-    private String paymentMode;
+    private String paymentMode = "Minto Coin";
     private List<Detail> details = new ArrayList<>();
-    private String invoiceNo;
     private String travelId;
+    private String invoiceNo = travelId;
     private String bookedBy;
     private String email;
     private String contact;

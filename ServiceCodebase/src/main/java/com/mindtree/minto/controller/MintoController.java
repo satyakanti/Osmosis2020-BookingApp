@@ -4,6 +4,7 @@
 package com.mindtree.minto.controller;
 
 import java.util.List;
+import java.util.Set;
 
 import javax.validation.Valid;
 
@@ -36,6 +37,7 @@ import com.mindtree.minto.exception.AuthenticationFailureException;
 import com.mindtree.minto.exception.InvalidRequestException;
 import com.mindtree.minto.exception.RegistrationException;
 import com.mindtree.minto.exception.TransferFailureException;
+import com.mindtree.minto.model.ExpenseInfo;
 import com.mindtree.minto.service.MintoService;
 
 import io.swagger.annotations.Api;
@@ -189,6 +191,13 @@ public class MintoController {
     	mintoService.addExpense(expenses);
         return new ResponseEntity<String>("Expense Claimed Successfully!!", HttpStatus.OK);
 
+    }
+    
+    @ApiOperation(value = "Get Expenses")
+    @GetMapping(value = "/api/expense/{travelId}")
+    public ResponseEntity<Set<ExpenseInfo>> getExpenses(@PathVariable("travelId") Integer travelId) throws InvalidRequestException {
+        Set<ExpenseInfo> expenses = mintoService.getExpenses(travelId);
+        return new ResponseEntity<Set<ExpenseInfo>>(expenses, HttpStatus.OK);
     }
     
     @ApiOperation(value = "")

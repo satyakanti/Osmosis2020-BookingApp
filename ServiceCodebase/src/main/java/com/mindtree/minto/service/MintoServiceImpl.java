@@ -719,7 +719,7 @@ public class MintoServiceImpl implements MintoService {
 		
 		Optional<String> txId = Arrays.stream(split).filter(str -> str.startsWith("Ref: ")).findFirst();
 		if (txId.isPresent()) {
-			resp.setAmmount(txId.get().substring("Ref: ".length()));
+			resp.setTxnId(txId.get().substring("Ref: ".length()));
 		}
 		for (int i = split.length-1; i >= 0; i--) {
 			String str = split[i].trim();
@@ -731,18 +731,20 @@ public class MintoServiceImpl implements MintoService {
 		return resp;
 	}
     
-    @Override
-	public ConfirmBooking processBooking(PackageDTO packageDTO) throws AuthenticationFailureException, InvalidRequestException, TransferFailureException {
-    	User user = findUser(packageDTO.getEmail());
-    	String transactionId = null;
-    	if (user != null && user.getWalletID() != null) {
-    		boolean isFaceIdMatched = isFaceMatched(packageDTO.getFaceId(), user);
+	@Override
+	public ConfirmBooking processBooking(PackageDTO packageDTO)
+			throws AuthenticationFailureException, InvalidRequestException, TransferFailureException {
+		User user = findUser(packageDTO.getEmail());
+		String transactionId = null;
+		if (user != null && user.getWalletID() != null) {
+			boolean isFaceIdMatched = isFaceMatched(packageDTO.getFaceId(), user);
 			if (isFaceIdMatched) {
 				ConfirmBalance balance = getBalance(user.getWalletID());
-				if (Integer.valueOf(balance.getBalance()) > packageDTO.getTotal()) {
-					transactionId = transferFundsToAdmin(packageDTO.getTotal(), user.getWalletID());
+				Integer total = packageDTO.getTotal();
+				if (Integer.valueOf(balance.getBalance()) > total) {
+					transactionId = transferFundsToAdmin(total, user.getWalletID());
 					TravelInfo travelInfo = addTravelInfo(user, packageDTO.getTravelInfo());
-					byte[] invoice = generateInvoice(packageDTO, user, travelInfo.getTravelId());
+					byte[] invoice = generateInvoice(packageDTO, user, travelInfo.getTravelId(), transactionId, total);
 					travelInfo.setInvoice(invoice);
 					travelDAO.save(travelInfo);
 					createBookings(packageDTO, user);
@@ -751,22 +753,24 @@ public class MintoServiceImpl implements MintoService {
 				} else {
 					throw new TransferFailureException("Insufficient Funds");
 				}
-			}
-			else {
+			} else {
 				throw new AuthenticationFailureException("Face ID Not Matched");
 			}
-    	}
-    	
+		}
+
 		return new ConfirmBooking("Booking successfull", transactionId);
 	}
 
-	private byte[] generateInvoice(PackageDTO packageDTO, User user, Integer travelId) {
+	private byte[] generateInvoice(PackageDTO packageDTO, User user, Integer travelId, String transactionId,
+			Integer total) {
 		Invoice invoice = new Invoice();
 		invoice.setDate(CommonUtil.getNewDate());
-		invoice.setBookedBy(user.getLastName() + user.getFirstName());
+		invoice.setBookedBy(user.getLastName() + " " + user.getFirstName());
 		invoice.setEmail(user.getEmail());
 		invoice.setContact(user.getContact());
 		invoice.setTravelId(String.valueOf(travelId));
+		invoice.setTxnId(transactionId);
+		invoice.setTotalPrice(total);
 		addFlightDetails(packageDTO.getFlight(), invoice);
 		addHoteDetails(packageDTO.getHotel(), invoice);
 		addCarDetails(packageDTO.getCar(), invoice);
@@ -853,7 +857,7 @@ public class MintoServiceImpl implements MintoService {
     	}
     	if (result != null && result.get("result") != null) {
     		LinkedHashMap<String, Object> resultMap = result.get("result");
-    		transactionId = (String) resultMap.get("transactionHash");
+    		transactionId = (String) resultMap.get("blockHash");
     	}
 		return transactionId;
 	}
@@ -913,7 +917,7 @@ public class MintoServiceImpl implements MintoService {
 				user.setTravelInfos(travelInfos);
 			}
 			user.getTravelInfos().add(travelInfo);
-			userDAO.save(user);
+			travelInfo = travelDAO.save(travelInfo);
 		}
 		return travelInfo;
 	}
@@ -1132,6 +1136,16 @@ public class MintoServiceImpl implements MintoService {
 		}
 		travelDAO.save(travelInfo);
 	}
+	
+	@Override
+	public Set<ExpenseInfo> getExpenses(Integer travelId) throws InvalidRequestException {
+		Set<ExpenseInfo> expenses = null;
+		TravelInfo travelInfo = getTravelInfo(travelId);
+		if (travelInfo != null) {
+			expenses = travelInfo.getExpenseInfos();
+		}
+		return expenses;
+	}
 
 	private TravelInfo getTravelInfo(Integer traveId) throws InvalidRequestException {
 		TravelInfo travelInfo = null;
@@ -1149,7 +1163,7 @@ public class MintoServiceImpl implements MintoService {
         try {
 
             Map<String, Object> parameters = new HashMap<>();
-            parameters.put("order", invoice);
+            parameters.put("invoice", invoice);
             JasperReport report = (JasperReport) JRLoader
                 .loadObject(this.getClass().getResourceAsStream("/invoice.jasper"));
             JasperPrint jasperPrint = JasperFillManager.fillReport(report, parameters, new JREmptyDataSource());

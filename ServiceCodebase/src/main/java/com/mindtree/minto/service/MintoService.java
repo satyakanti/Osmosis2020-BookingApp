@@ -4,6 +4,7 @@
 package com.mindtree.minto.service;
 
 import java.util.List;
+import java.util.Set;
 
 import javax.validation.Valid;
 
@@ -29,6 +30,7 @@ import com.mindtree.minto.exception.AuthenticationFailureException;
 import com.mindtree.minto.exception.InvalidRequestException;
 import com.mindtree.minto.exception.RegistrationException;
 import com.mindtree.minto.exception.TransferFailureException;
+import com.mindtree.minto.model.ExpenseInfo;
 
 import net.sourceforge.tess4j.TesseractException;
 
@@ -161,5 +163,7 @@ public interface MintoService {
 	ConfirmBooking makePayment(@Valid PaymentDTO paymentDTO) throws AuthenticationFailureException, InvalidRequestException, TransferFailureException;
 
 	void addExpense(@Valid List<ExpenseDTO> expenses) throws InvalidRequestException, TesseractException;
+
+	Set<ExpenseInfo> getExpenses(Integer travelId) throws InvalidRequestException;
 
 }

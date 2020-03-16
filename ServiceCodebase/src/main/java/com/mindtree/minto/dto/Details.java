@@ -7,6 +7,7 @@ public class Details {
 
 	private String name;
 	private String partner;
+	private String _class;
 	private String city;
 	private String vendor;
 	private String type;
