@@ -29,6 +29,36 @@ public class PackageDTO {
     
     private Integer total;
     
+    private Hotel hotel;
+    
+    private Car car;
+    
+    private Insurance insurance;
+    
+	public Hotel getHotel() {
+		return hotel;
+	}
+
+	public void setHotel(Hotel hotel) {
+		this.hotel = hotel;
+	}
+
+	public Car getCar() {
+		return car;
+	}
+
+	public void setCar(Car car) {
+		this.car = car;
+	}
+
+	public Insurance getInsurance() {
+		return insurance;
+	}
+
+	public void setInsurance(Insurance insurance) {
+		this.insurance = insurance;
+	}
+
 	/**
 	 * @return the total
 	 */

@@ -6,6 +6,8 @@ package com.mindtree.minto.dto;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
+import com.mindtree.minto.util.CommonUtil;
+
 /**
  * @author M1026334
  *
@@ -234,6 +236,10 @@ public class FlightInfo {
 	 */
 	public void setArrivalOffset(String arrivalOffset) {
 		this.arrivalOffset = arrivalOffset;
+	}
+	
+	public String getInfo() {
+		return airlineCode+flightNo + " " + departureTime + " " + originPoint +  " " + CommonUtil.formatDate(departureDate);
 	}
 	 
 	@Override

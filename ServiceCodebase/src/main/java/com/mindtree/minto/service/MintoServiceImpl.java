@@ -51,6 +51,7 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import com.mindtree.minto.dto.BookingDTO;
+import com.mindtree.minto.dto.Car;
 import com.mindtree.minto.dto.ConfirmBalance;
 import com.mindtree.minto.dto.ConfirmBooking;
 import com.mindtree.minto.dto.ConfirmLoginStatusDTO;
@@ -58,10 +59,15 @@ import com.mindtree.minto.dto.ConfirmUserDTO;
 import com.mindtree.minto.dto.ConfirmWalletID;
 import com.mindtree.minto.dto.Detail;
 import com.mindtree.minto.dto.DetailType;
+import com.mindtree.minto.dto.Details;
 import com.mindtree.minto.dto.Events;
 import com.mindtree.minto.dto.ExpenseDTO;
+import com.mindtree.minto.dto.Fare;
+import com.mindtree.minto.dto.Flight;
 import com.mindtree.minto.dto.FlightInfo;
 import com.mindtree.minto.dto.FlightItinerary;
+import com.mindtree.minto.dto.Hotel;
+import com.mindtree.minto.dto.Insurance;
 import com.mindtree.minto.dto.Invoice;
 import com.mindtree.minto.dto.InvoiceInfo;
 import com.mindtree.minto.dto.LoginDTO;
@@ -88,6 +94,7 @@ import com.mindtree.minto.model.User;
 import com.mindtree.minto.repository.BookingRepository;
 import com.mindtree.minto.repository.TravelInfoRepository;
 import com.mindtree.minto.repository.UserRepository;
+import com.mindtree.minto.util.CommonUtil;
 import com.mindtree.minto.util.ConfigReader;
 
 import lombok.extern.slf4j.Slf4j;
@@ -657,13 +664,20 @@ public class MintoServiceImpl implements MintoService {
     	return new ConfirmBooking("Booking successfull", transactionId);
 	}
     
-    private InvoiceInfo getInvoiceInfo(ExpenseDTO expense) throws TesseractException {
-		if (expense.getFileName() == null) {
+    private InvoiceInfo getInvoiceInfo(ExpenseDTO expense, byte[] bs) throws TesseractException {
+		if (expense.getFileName() == null && bs == null) {
 			return null;
 		}
-		File tempFile = new File(System.getProperty("java.io.tmpdir")+"/"+expense.getFileName());
+		String fileName = expense.getFileName();
+		if (fileName == null) {
+			fileName = "tmp.pdf";
+		}
+		byte[] decoder = bs;
+		if (decoder == null) {
+			decoder = Base64.getDecoder().decode(expense.getDocument().split(";base64,")[1]);
+		}
+		File tempFile = new File(System.getProperty("java.io.tmpdir")+"/" + fileName);
 		try ( FileOutputStream fos = new FileOutputStream(tempFile); ) {
-		      byte[] decoder = Base64.getDecoder().decode(expense.getDocument().split(";base64,")[1]);
 		      fos.write(decoder);
 		      
 		    } catch (Exception e) {
@@ -673,7 +687,7 @@ public class MintoServiceImpl implements MintoService {
 	      try 
 	      {	
 	    	  URL resource = getClass().getResource("/data");
-	    	 instance.setDatapath(resource.getPath().substring(1));
+	    	 instance.setDatapath(resource.getPath().substring(1)); 
 	         return processImgeText(instance.doOCR(tempFile));
 	      } 
 	      finally {
@@ -727,16 +741,12 @@ public class MintoServiceImpl implements MintoService {
 				ConfirmBalance balance = getBalance(user.getWalletID());
 				if (Integer.valueOf(balance.getBalance()) > packageDTO.getTotal()) {
 					transactionId = transferFundsToAdmin(packageDTO.getTotal(), user.getWalletID());
-					Invoice invoice = new Invoice();
-					for (PackageBookingDTO bookingDTO : packageDTO.getBookings()) {
-						Detail detail = new Detail();
-						detail.setType(DetailType.valueOf(bookingDTO.getPartner()));
-						
-						invoice.getDetails().add(detail);
-					}
-					
-					addTravelInfo(user, packageDTO.getTravelInfo());
+					TravelInfo travelInfo = addTravelInfo(user, packageDTO.getTravelInfo());
+					byte[] invoice = generateInvoice(packageDTO, user, travelInfo.getTravelId());
+					travelInfo.setInvoice(invoice);
+					travelDAO.save(travelInfo);
 					createBookings(packageDTO, user);
+					sendMail(invoice, user.getEmail());
 					processFundsToMerchants(packageDTO);
 				} else {
 					throw new TransferFailureException("Insufficient Funds");
@@ -748,6 +758,75 @@ public class MintoServiceImpl implements MintoService {
     	}
     	
 		return new ConfirmBooking("Booking successfull", transactionId);
+	}
+
+	private byte[] generateInvoice(PackageDTO packageDTO, User user, Integer travelId) {
+		Invoice invoice = new Invoice();
+		invoice.setDate(CommonUtil.getNewDate());
+		invoice.setBookedBy(user.getLastName() + user.getFirstName());
+		invoice.setEmail(user.getEmail());
+		invoice.setContact(user.getContact());
+		invoice.setTravelId(String.valueOf(travelId));
+		addFlightDetails(packageDTO.getFlight(), invoice);
+		addHoteDetails(packageDTO.getHotel(), invoice);
+		addCarDetails(packageDTO.getCar(), invoice);
+		addInsuranceDetails(packageDTO.getInsurance(), invoice);
+		return createInvoice(invoice);
+	}
+
+	private void addInsuranceDetails(Insurance insurance, Invoice invoice) {
+		if (insurance != null && insurance.getInsurance() != null) {
+			Detail detail = new Detail();
+			detail.setType(DetailType.INSURANCE);
+			detail.setInfo(insurance.getInfo());
+			Details details = insurance.getInsurance();
+			detail.setBasicPrice(details.getBasePrice());
+			detail.setTax(details.getTax());
+			detail.setTotalPrice(details.getPrice());
+			invoice.getDetails().add(detail);
+		}
+	}
+
+	private void addCarDetails(Car car, Invoice invoice) {
+		if (car != null && car.getCar() != null) {
+			Detail detail = new Detail();
+			detail.setType(DetailType.CAR);
+			detail.setInfo(car.getInfo());
+			Details details = car.getCar();
+			detail.setBasicPrice(details.getBasePrice());
+			detail.setTax(details.getTax());
+			detail.setTotalPrice(details.getPrice());
+			invoice.getDetails().add(detail);
+		}
+	}
+
+	private void addHoteDetails(Hotel hotel, Invoice invoice) {
+		if (hotel != null && hotel.getHotel() != null) {
+			Detail detail = new Detail();
+			detail.setType(DetailType.HOTEL);
+			detail.setInfo(hotel.getInfo());
+			Details details = hotel.getHotel();
+			detail.setBasicPrice(details.getBasePrice());
+			detail.setTax(details.getTax());
+			detail.setTotalPrice(details.getPrice());
+			invoice.getDetails().add(detail);
+		}
+	}
+
+	private void addFlightDetails(Flight flight, Invoice invoice) {
+		if (flight != null && flight.getOfferPack() != null && flight.getOfferPack().getFare() != null
+				&& flight.getOfferPack().getOnwardFlightItinerary() != null
+				&& flight.getOfferPack().getOnwardFlightItinerary().getFlightInfos() != null) {
+			FlightInfo flightInfo = flight.getOfferPack().getOnwardFlightItinerary().getFlightInfos().get(0);
+			Fare fare = flight.getOfferPack().getFare();
+			Detail detail = new Detail();
+			detail.setType(DetailType.FLIGHT);
+			detail.setInfo(flightInfo.getInfo());
+			detail.setBasicPrice(fare.getBaseFare());
+			detail.setTax(fare.getTaxes());
+			detail.setTotalPrice(fare.getTotal());
+			invoice.getDetails().add(detail);
+		}
 	}
 
 	private void processFundsToMerchants(PackageDTO packageDTO) {
@@ -823,9 +902,10 @@ public class MintoServiceImpl implements MintoService {
 		return flightDetails;
 	}
 
-	private void addTravelInfo(User user, String travelInfoString) {
+	private TravelInfo addTravelInfo(User user, String travelInfoString) {
+		TravelInfo travelInfo = null;
 		if (travelInfoString != null) {
-			TravelInfo travelInfo = new TravelInfo();
+			travelInfo = new TravelInfo();
 			travelInfo.setTravelInfo(travelInfoString.getBytes());
 			travelInfo.setUser(user);
 			if (user.getTravelInfos() == null) {
@@ -835,6 +915,7 @@ public class MintoServiceImpl implements MintoService {
 			user.getTravelInfos().add(travelInfo);
 			userDAO.save(user);
 		}
+		return travelInfo;
 	}
 
 	private User findUser(String email) throws AuthenticationFailureException {
@@ -1039,7 +1120,7 @@ public class MintoServiceImpl implements MintoService {
 			ExpenseInfo expenseInfo = new ExpenseInfo();
 			expenseInfo.setDateOfClaim(new Date());
 			expenseInfo.setDescription(expenseDTO.getDescription());
-			InvoiceInfo invoiceInfo = getInvoiceInfo(expenseDTO);
+			InvoiceInfo invoiceInfo = getInvoiceInfo(expenseDTO, travelInfo.getInvoice());
 			if (invoiceInfo != null) {
 				expenseInfo.setDateOfExpense(invoiceInfo.getDate());
 				expenseInfo.setMerchantName(invoiceInfo.getMerchant());
@@ -1067,8 +1148,6 @@ public class MintoServiceImpl implements MintoService {
 	private byte[] createInvoice(Invoice invoice) {
         try {
 
- 
-
             Map<String, Object> parameters = new HashMap<>();
             parameters.put("order", invoice);
             JasperReport report = (JasperReport) JRLoader
@@ -1085,51 +1164,52 @@ public class MintoServiceImpl implements MintoService {
 	
 	private void sendMail(byte[] invoicePdf ,String email) {
 
-        
-
-        Properties props = new Properties();
-
-        props.put("mail.smtp.auth", "true");
-        props.put("mail.smtp.starttls.enable", "true");
-        props.put("mail.smtp.host", host);
-        props.put("mail.smtp.port", port);
-
-        // Get the Session object.
-        Session session = Session.getInstance(props, new javax.mail.Authenticator() {
-            protected PasswordAuthentication getPasswordAuthentication() {
-                return new PasswordAuthentication(username, password);
-            }
+        Thread th = new Thread(() -> {
+        	Properties props = new Properties();
+        	props.put("mail.smtp.auth", "true");
+        	props.put("mail.smtp.starttls.enable", "true");
+        	props.put("mail.smtp.host", host);
+        	props.put("mail.smtp.port", port);
+        	
+        	// Get the Session object.
+        	Session session = Session.getInstance(props, new javax.mail.Authenticator() {
+        		protected PasswordAuthentication getPasswordAuthentication() {
+        			return new PasswordAuthentication(username, password);
+        		}
+        	});
+        	
+        	try {
+        		Message message = new MimeMessage(session);
+        		message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(email));
+        		
+        		message.setSubject("Invoice From Swift Corporate  Booking" );
+        		
+        		BodyPart messageBodyPart = new MimeBodyPart();
+        		
+        		messageBodyPart.setText("Please Find the attached Invoice");
+        		
+        		Multipart multipart = new MimeMultipart();
+        		
+        		multipart.addBodyPart(messageBodyPart);
+        		
+        		messageBodyPart = new MimeBodyPart();
+        		DataSource source = new ByteArrayDataSource(invoicePdf, "application/pdf");
+        		messageBodyPart.setDataHandler(new DataHandler(source));
+        		messageBodyPart.setFileName("Invoice.pdf");
+        		multipart.addBodyPart(messageBodyPart);
+        		
+        		message.setContent(multipart);
+        		
+        		Transport.send(message);
+        		
+        	}
+        	catch (MessagingException e) {
+        		throw new RuntimeException(e);
+        	}
         });
-
-        try {
-            Message message = new MimeMessage(session);
-            message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(email));
-
-            message.setSubject("Invoice From Swift Corporate  Booking" );
-
-            BodyPart messageBodyPart = new MimeBodyPart();
-
-            messageBodyPart.setText("Please Find the attached Invoice");
-
-            Multipart multipart = new MimeMultipart();
-
-            multipart.addBodyPart(messageBodyPart);
-
-            messageBodyPart = new MimeBodyPart();
-            DataSource source = new ByteArrayDataSource(invoicePdf, "application/pdf");
-            messageBodyPart.setDataHandler(new DataHandler(source));
-            messageBodyPart.setFileName("Invoice.pdf");
-            multipart.addBodyPart(messageBodyPart);
-
-            message.setContent(multipart);
-
-            Transport.send(message);
-
-        }
-        catch (MessagingException e) {
-            throw new RuntimeException(e);
-        }
-    }
+        th.start();
+	}
+        
 
 
 }

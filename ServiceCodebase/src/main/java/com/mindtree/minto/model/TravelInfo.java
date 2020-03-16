@@ -40,6 +40,10 @@ public class TravelInfo {
     @Lob
     @Column(name = "TRAVEL_INFO")
     private byte[] travelInfo;
+    
+    @Lob
+    @Column(name = "INVOICE")
+    private byte[] invoice;
 
     @OneToMany(
     		mappedBy="travelInfo",
@@ -47,6 +51,14 @@ public class TravelInfo {
             orphanRemoval = true
         )
     private Set<ExpenseInfo> expenseInfos;
+
+	public byte[] getInvoice() {
+		return invoice;
+	}
+
+	public void setInvoice(byte[] invoice) {
+		this.invoice = invoice;
+	}
 
 	public Integer getTravelId() {
 		return travelId;
