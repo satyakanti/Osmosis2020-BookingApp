@@ -11,8 +11,8 @@ public class Details {
 	private String city;
 	private String vendor;
 	private String type;
-	private Integer basePrice;
-	private Integer tax;
-	private Integer price;
+	private double basePrice;
+	private double tax;
+	private double price;
 	
 }

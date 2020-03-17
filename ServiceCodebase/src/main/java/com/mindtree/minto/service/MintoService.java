@@ -166,4 +166,6 @@ public interface MintoService {
 
 	Set<ExpenseInfo> getExpenses(Integer travelId) throws InvalidRequestException;
 
+	String rechargeUserBalance(String emailID) throws InvalidRequestException, TransferFailureException;
+
 }

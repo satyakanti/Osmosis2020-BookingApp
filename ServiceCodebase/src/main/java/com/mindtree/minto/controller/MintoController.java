@@ -159,6 +159,13 @@ public class MintoController {
         throws InvalidRequestException {
         return new ResponseEntity<ConfirmBalance>(mintoService.getUserBalance(emailID.toLowerCase()), HttpStatus.OK);
     }
+    
+    @ApiOperation(value = "recharge User's Balance")
+    @GetMapping(value = "/api/rechargeUserBalance/{emailID}")
+    public ResponseEntity<String> recargeUserBalance(@PathVariable("emailID") String emailID)
+        throws InvalidRequestException, TransferFailureException {
+        return new ResponseEntity<String>(mintoService.rechargeUserBalance(emailID.toLowerCase()), HttpStatus.OK);
+    }
 
     @ApiOperation(value = "")
     @GetMapping(value = "/api/bookPackage/{packageID}/{emailID}")

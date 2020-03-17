@@ -116,439 +116,436 @@ import net.sourceforge.tess4j.TesseractException;
 @Service
 public class MintoServiceImpl implements MintoService {
 
-	  @Value("${app.smtp.username}")
-	    private String username;
-	    @Value("${app.smtp.password}")
-	    private String password;
-	    @Value("${app.smtp.port}")
-	    private String port;
-	    @Value("${app.smtp.host}")
-	    private String host;
-    @Autowired
-    UserRepository userDAO;
-    
-    @Autowired
-    BookingRepository bookingDAO;
-    
-    @Autowired
-    TravelInfoRepository travelDAO;
+	@Value("${app.smtp.username}")
+	private String username;
+	@Value("${app.smtp.password}")
+	private String password;
+	@Value("${app.smtp.port}")
+	private String port;
+	@Value("${app.smtp.host}")
+	private String host;
+	@Autowired
+	UserRepository userDAO;
 
-    @Autowired
-    RestTemplate restTemplate;
+	@Autowired
+	BookingRepository bookingDAO;
 
-    /**
-     * Description : <<WRITE DESCRIPTION HERE>>
-     * 
-     * @param user
-     * @return
-     * @throws RegistrationException
-     * @throws InvalidRequestException
-     */
-    @Override
-    public ConfirmUserDTO registerUser(RegisterUserDTO userDTO) throws RegistrationException {
-    	boolean isWalletPresent = true;
-        if (userDTO.getWalletID() == null) {
-        	isWalletPresent = false;
-            ConfirmWalletID confirmWalletID = createNewWalletOnBlockChain();
-            if (confirmWalletID != null) {
-                userDTO.setWalletID(confirmWalletID.getAddress());
-            }
-        }
-        User savedUser = saveUserToDB(userDTO);
-        if (!isWalletPresent) {
-        	fundWalletWithInitialTokens(savedUser);
-        }
-        return mapSavedUserToDTO(savedUser);
-    }
+	@Autowired
+	TravelInfoRepository travelDAO;
 
-    /**
-     * Description : <<WRITE DESCRIPTION HERE>>
-     * 
-     * @param savedUser
-     */
-    private void fundWalletWithInitialTokens(User savedUser) {
-        if (savedUser != null && !StringUtils.isEmpty(savedUser.getWalletID())) {
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.setBasicAuth(ConfigReader.getAuthUserName(), ConfigReader.getAuthPWD());
-            String requestJSON = "{\"toAddress\" : \"" + savedUser.getWalletID() + "\", \"amount\" : " + 2500 + "}";
-            HttpEntity<String> request = new HttpEntity<String>(requestJSON, headers);
-            try {
-                restTemplate.postForObject(createFundWalletURL(), request, Object.class);
-            }
-            catch (Exception ex) {
+	@Autowired
+	RestTemplate restTemplate;
 
-            }
-        }
-    }
+	/**
+	 * Description : <<WRITE DESCRIPTION HERE>>
+	 * 
+	 * @param user
+	 * @return
+	 * @throws RegistrationException
+	 * @throws InvalidRequestException
+	 */
+	@Override
+	public ConfirmUserDTO registerUser(RegisterUserDTO userDTO) throws RegistrationException {
+		boolean isWalletPresent = true;
+		if (userDTO.getWalletID() == null) {
+			isWalletPresent = false;
+			ConfirmWalletID confirmWalletID = createNewWalletOnBlockChain();
+			if (confirmWalletID != null) {
+				userDTO.setWalletID(confirmWalletID.getAddress());
+			}
+		}
+		User savedUser = saveUserToDB(userDTO);
+		if (!isWalletPresent) {
+			fundWalletWithInitialTokens(savedUser);
+		}
+		return mapSavedUserToDTO(savedUser);
+	}
 
-    /**
-     * Description : <<WRITE DESCRIPTION HERE>>
-     * 
-     * @return
-     */
-    private String createFundWalletURL() {
-        return ConfigReader.getFundWalletURL().concat(ConfigReader.getCoinContractID()).concat("/transfer");
-    }
+	/**
+	 * Description : <<WRITE DESCRIPTION HERE>>
+	 * 
+	 * @param savedUser
+	 */
+	private void fundWalletWithInitialTokens(User savedUser) {
+		if (savedUser != null && !StringUtils.isEmpty(savedUser.getWalletID())) {
+			HttpHeaders headers = new HttpHeaders();
+			headers.setContentType(MediaType.APPLICATION_JSON);
+			headers.setBasicAuth(ConfigReader.getAuthUserName(), ConfigReader.getAuthPWD());
+			String requestJSON = "{\"toAddress\" : \"" + savedUser.getWalletID() + "\", \"amount\" : " + 2500 + "}";
+			HttpEntity<String> request = new HttpEntity<String>(requestJSON, headers);
+			try {
+				restTemplate.postForObject(createFundWalletURL(), request, Object.class);
+			} catch (Exception ex) {
 
-    /**
-     * Description : <<WRITE DESCRIPTION HERE>>
-     * 
-     * @param userDTO
-     * @return
-     * @throws RegistrationException
-     */
-    private User saveUserToDB(RegisterUserDTO userDTO) throws RegistrationException {
-        User savedUser = null;
+			}
+		}
+	}
+
+	/**
+	 * Description : <<WRITE DESCRIPTION HERE>>
+	 * 
+	 * @return
+	 */
+	private String createFundWalletURL() {
+		return ConfigReader.getFundWalletURL().concat(ConfigReader.getCoinContractID()).concat("/transfer");
+	}
+
+	/**
+	 * Description : <<WRITE DESCRIPTION HERE>>
+	 * 
+	 * @param userDTO
+	 * @return
+	 * @throws RegistrationException
+	 */
+	private User saveUserToDB(RegisterUserDTO userDTO) throws RegistrationException {
+		User savedUser = null;
 		if (userDTO.getUserRole() == null) {
 			userDTO.setUserRole("User");
 		}
-        User user = mapDTOtoEntity(userDTO);
-        try {
-            savedUser = userDAO.save(user);
-        }
-        catch (DataIntegrityViolationException e) {
-            throw new RegistrationException("User with username " + user.getEmail() + " already exists!");
-        }
-        catch (Exception e) {
-            throw new RegistrationException("Couldn't register user");
-        }
-        return savedUser;
-    }
+		User user = mapDTOtoEntity(userDTO);
+		try {
+			savedUser = userDAO.save(user);
+		} catch (DataIntegrityViolationException e) {
+			throw new RegistrationException("User with username " + user.getEmail() + " already exists!");
+		} catch (Exception e) {
+			throw new RegistrationException("Couldn't register user");
+		}
+		return savedUser;
+	}
 
-    /**
-     * Description : <<WRITE DESCRIPTION HERE>>
-     * 
-     * @param regUserserDTO
-     * @return
-     */
-    private User mapDTOtoEntity(RegisterUserDTO regUserserDTO) {
-        User user = new User();
-        user.setEmail(regUserserDTO.getEmail());
-        user.setFaceID(regUserserDTO.getFaceId());
-        user.setPswrd(regUserserDTO.getPassword());
-        user.setUserRole(regUserserDTO.getUserRole());
-        user.setWalletID(regUserserDTO.getWalletID());
-        user.setContact(regUserserDTO.getContact());
-        user.setLastName(regUserserDTO.getLastName());
-        if (regUserserDTO.getPrimaryUser() != null) {
-        	user.setDateOfBirth(regUserserDTO.getPrimaryUser().getDateOfBirth());
-        	user.setFirstName(regUserserDTO.getPrimaryUser().getFirstName());
-        	user.setLastName(regUserserDTO.getPrimaryUser().getLastName());
-        	if ("User".equalsIgnoreCase(regUserserDTO.getUserRole())) {
-        		Traveller traveller = new Traveller();
-        		traveller.setFirstName(regUserserDTO.getPrimaryUser().getFirstName());
-        		traveller.setLastName(regUserserDTO.getPrimaryUser().getLastName());
-        		traveller.setDateOfBirth(regUserserDTO.getPrimaryUser().getDateOfBirth());
-        		traveller.setContact(regUserserDTO.getContact());
-        		traveller.setGender(regUserserDTO.getPrimaryUser().getGender());
-        		traveller.setPassportNo(regUserserDTO.getPrimaryUser().getPassportNo());
-        		traveller.setIssueCountry(regUserserDTO.getPrimaryUser().getIssuingCountry());
-        		traveller.setIssueDate(regUserserDTO.getPrimaryUser().getIssuingDate());
-        		traveller.setExpiryDate(regUserserDTO.getPrimaryUser().getExpiryDate());
-        		traveller.setUser(user);
-        		Set<Traveller> travellers = new HashSet<Traveller>();
-        		travellers.add(traveller);
-        		user.setTravellers(travellers);
-        	}
-        }
+	/**
+	 * Description : <<WRITE DESCRIPTION HERE>>
+	 * 
+	 * @param regUserserDTO
+	 * @return
+	 */
+	private User mapDTOtoEntity(RegisterUserDTO regUserserDTO) {
+		User user = new User();
+		user.setEmail(regUserserDTO.getEmail());
+		user.setFaceID(regUserserDTO.getFaceId());
+		user.setPswrd(regUserserDTO.getPassword());
+		user.setUserRole(regUserserDTO.getUserRole());
+		user.setWalletID(regUserserDTO.getWalletID());
+		user.setContact(regUserserDTO.getContact());
+		user.setLastName(regUserserDTO.getLastName());
+		if (regUserserDTO.getPrimaryUser() != null) {
+			user.setDateOfBirth(regUserserDTO.getPrimaryUser().getDateOfBirth());
+			user.setFirstName(regUserserDTO.getPrimaryUser().getFirstName());
+			user.setLastName(regUserserDTO.getPrimaryUser().getLastName());
+			if ("User".equalsIgnoreCase(regUserserDTO.getUserRole())) {
+				Traveller traveller = new Traveller();
+				traveller.setFirstName(regUserserDTO.getPrimaryUser().getFirstName());
+				traveller.setLastName(regUserserDTO.getPrimaryUser().getLastName());
+				traveller.setDateOfBirth(regUserserDTO.getPrimaryUser().getDateOfBirth());
+				traveller.setContact(regUserserDTO.getContact());
+				traveller.setGender(regUserserDTO.getPrimaryUser().getGender());
+				traveller.setPassportNo(regUserserDTO.getPrimaryUser().getPassportNo());
+				traveller.setIssueCountry(regUserserDTO.getPrimaryUser().getIssuingCountry());
+				traveller.setIssueDate(regUserserDTO.getPrimaryUser().getIssuingDate());
+				traveller.setExpiryDate(regUserserDTO.getPrimaryUser().getExpiryDate());
+				traveller.setUser(user);
+				Set<Traveller> travellers = new HashSet<Traveller>();
+				travellers.add(traveller);
+				user.setTravellers(travellers);
+			}
+		}
 		user.setRegistrationDate(new Date());
-        return user;
-    }
+		return user;
+	}
 
-    /**
-     * Description : <<WRITE DESCRIPTION HERE>>
-     * 
-     * @param savedUser
-     * @return
-     */
-    private ConfirmUserDTO mapSavedUserToDTO(User savedUser) {
-        ConfirmUserDTO confirmUser = null;
-        if (savedUser != null) {
-            confirmUser = new ConfirmUserDTO();
-            confirmUser.setUserName(savedUser.getEmail());
-            confirmUser.setRole(savedUser.getUserRole());
-            confirmUser.setResult("User with email " + savedUser.getEmail() + " registered successfully!");
-        }
-        return confirmUser;
-    }
+	/**
+	 * Description : <<WRITE DESCRIPTION HERE>>
+	 * 
+	 * @param savedUser
+	 * @return
+	 */
+	private ConfirmUserDTO mapSavedUserToDTO(User savedUser) {
+		ConfirmUserDTO confirmUser = null;
+		if (savedUser != null) {
+			confirmUser = new ConfirmUserDTO();
+			confirmUser.setUserName(savedUser.getEmail());
+			confirmUser.setRole(savedUser.getUserRole());
+			confirmUser.setResult("User with email " + savedUser.getEmail() + " registered successfully!");
+		}
+		return confirmUser;
+	}
 
-    /**
-     * Description : <<WRITE DESCRIPTION HERE>>
-     * 
-     * @param login
-     * @return
-     * @throws AuthenticationFailureException
-     */
-    @Override
-    public ConfirmLoginStatusDTO checkAndLogin(@Valid LoginDTO login) throws AuthenticationFailureException {
-    	ConfirmLoginStatusDTO confirmLoginStatusDTO = null;
-        try {
-        	List<User> users = userDAO.getUsers(login.getEmail(), login.getPassword());
-        	if (users != null && !users.isEmpty()) {
-        		confirmLoginStatusDTO = new ConfirmLoginStatusDTO();
-        		confirmLoginStatusDTO.setMessage("Authentication Successful");
-        		mapEntityToDTO(users.get(0), confirmLoginStatusDTO);
-        	}
-        	else {
-        		throw new AuthenticationFailureException("User Not Authorized");
-        	}
-        }
-        catch (Exception e) {
-            throw new AuthenticationFailureException("Login Failed");
-        }
-        return confirmLoginStatusDTO;
-    }
+	/**
+	 * Description : <<WRITE DESCRIPTION HERE>>
+	 * 
+	 * @param login
+	 * @return
+	 * @throws AuthenticationFailureException
+	 */
+	@Override
+	public ConfirmLoginStatusDTO checkAndLogin(@Valid LoginDTO login) throws AuthenticationFailureException {
+		ConfirmLoginStatusDTO confirmLoginStatusDTO = null;
+		try {
+			List<User> users = userDAO.getUsers(login.getEmail(), login.getPassword());
+			if (users != null && !users.isEmpty()) {
+				confirmLoginStatusDTO = new ConfirmLoginStatusDTO();
+				confirmLoginStatusDTO.setMessage("Authentication Successful");
+				mapEntityToDTO(users.get(0), confirmLoginStatusDTO);
+			} else {
+				throw new AuthenticationFailureException("User Not Authorized");
+			}
+		} catch (Exception e) {
+			throw new AuthenticationFailureException("Login Failed");
+		}
+		return confirmLoginStatusDTO;
+	}
 
+	/**
+	 * Description : <<WRITE DESCRIPTION HERE>>
+	 * 
+	 * @param login
+	 * @return
+	 * @throws AuthenticationFailureException
+	 * @throws InvalidRequestException
+	 */
+	@Override
+	public ConfirmLoginStatusDTO faceIdLoginImpl(String email, String faceId)
+			throws AuthenticationFailureException, InvalidRequestException {
+		User user = null;
+		ConfirmLoginStatusDTO confirmLoginStatusDTO = null;
+		try {
+			List<User> users = userDAO.getUsers(email);
+			if (users != null && !users.isEmpty()) {
+				user = users.get(0);
+				if (isFaceMatched(faceId, user)) {
+					confirmLoginStatusDTO = new ConfirmLoginStatusDTO();
+					confirmLoginStatusDTO.setMessage("Authentication Successful");
+					mapEntityToDTO(user, confirmLoginStatusDTO);
+				} else {
+					throw new AuthenticationFailureException("Face ID Not Matched");
+				}
+			} else {
+				throw new AuthenticationFailureException("User Not Registered");
+			}
+		} catch (Exception e) {
+			throw new AuthenticationFailureException("Login Failed");
+		}
 
-    /**
-     * Description : <<WRITE DESCRIPTION HERE>>
-     * 
-     * @param login
-     * @return
-     * @throws AuthenticationFailureException
-     * @throws InvalidRequestException
-     */
-    @Override
-    public ConfirmLoginStatusDTO faceIdLoginImpl(String email, String faceId)
-        throws AuthenticationFailureException, InvalidRequestException {
-        User user = null;
-        ConfirmLoginStatusDTO confirmLoginStatusDTO = null;
-        try {
-        	List<User> users = userDAO.getUsers(email);
-        	if (users != null && !users.isEmpty()) {
-        		user = users.get(0);
-        		if (isFaceMatched(faceId, user)) {
-            		confirmLoginStatusDTO = new ConfirmLoginStatusDTO();
-            		confirmLoginStatusDTO.setMessage("Authentication Successful");
-            		mapEntityToDTO(user, confirmLoginStatusDTO);
-            	}
-            	else {
-                    throw new AuthenticationFailureException("Face ID Not Matched");
-                }
-        	}
-        	else {
-        		throw new AuthenticationFailureException("User Not Registered");
-        	}
-        }
-        catch (Exception e) {
-            throw new AuthenticationFailureException("Login Failed");
-        }
-        
-        return confirmLoginStatusDTO;
-    }
+		return confirmLoginStatusDTO;
+	}
 
 	private boolean isFaceMatched(String faceId, User user) throws AuthenticationFailureException {
 		Boolean isIdentical = null;
 		if (user != null) {
 			String faceID1 = user.getFaceID();
-		    HttpHeaders headers = new HttpHeaders();
-		    MediaType mediaType = new MediaType("application", "json");
-		    headers.setContentType(mediaType);
-		    headers.set("Ocp-Apim-Subscription-Key", ConfigReader.getFaceAPISubscriptionKey());
-		    String requestJson = "{\"faceId1\": \"" + faceID1 + "\",\"faceId2\": \"" + faceId + "\"}";
-		    HttpEntity<String> entity = new HttpEntity<String>(requestJson, headers);
-		    ResponseEntity<Object> result = null;
-		    try {
-		        result = restTemplate.exchange(ConfigReader.getMicrosoftFaceAPI(), HttpMethod.POST, entity,
-		            Object.class);
-		    }
-		    catch (RestClientException e) {
-		    	e.printStackTrace();
-		        throw new AuthenticationFailureException("Couldn't match face");
-		    }
-		    if (result != null && result.getBody() != null) {
-		    	Map<String, Object> responseMap = (java.util.Map<String, Object>) result.getBody();
-		    	isIdentical = (Boolean) responseMap.get("isIdentical");
-		    }
-		    else {
-		        throw new AuthenticationFailureException("Face ID Authentication Failed");
-		    }
+			HttpHeaders headers = new HttpHeaders();
+			MediaType mediaType = new MediaType("application", "json");
+			headers.setContentType(mediaType);
+			headers.set("Ocp-Apim-Subscription-Key", ConfigReader.getFaceAPISubscriptionKey());
+			String requestJson = "{\"faceId1\": \"" + faceID1 + "\",\"faceId2\": \"" + faceId + "\"}";
+			HttpEntity<String> entity = new HttpEntity<String>(requestJson, headers);
+			ResponseEntity<Object> result = null;
+			try {
+				result = restTemplate.exchange(ConfigReader.getMicrosoftFaceAPI(), HttpMethod.POST, entity,
+						Object.class);
+			} catch (RestClientException e) {
+				e.printStackTrace();
+				throw new AuthenticationFailureException("Couldn't match face");
+			}
+			if (result != null && result.getBody() != null) {
+				Map<String, Object> responseMap = (java.util.Map<String, Object>) result.getBody();
+				isIdentical = (Boolean) responseMap.get("isIdentical");
+			} else {
+				throw new AuthenticationFailureException("Face ID Authentication Failed");
+			}
 		}
-		return (isIdentical != null && isIdentical) ;
+		return (isIdentical != null && isIdentical);
 	}
 
-    /**
-     * Description : <<WRITE DESCRIPTION HERE>>
-     * 
-     * @param login
-     * @return
-     */
-    @Override
-    public ConfirmBalance getBalance() {
-        ConfirmBalance confirmBalance = null;
-        System.out.println(createBalanceURL());
-        ResponseEntity<Object> response = restTemplate.exchange(createBalanceURL(), HttpMethod.GET,
-            setHeaderAndAuthToken(), Object.class);
-        if (response != null && response.getBody() != null) {
-            Map<String, String> responseMap = (Map<String, String>) response.getBody();
-            confirmBalance = new ConfirmBalance(responseMap.get("balance"));
-        }
-        return confirmBalance;
-    }
+	/**
+	 * Description : <<WRITE DESCRIPTION HERE>>
+	 * 
+	 * @param login
+	 * @return
+	 */
+	@Override
+	public ConfirmBalance getBalance() {
+		ConfirmBalance confirmBalance = null;
+		System.out.println(createBalanceURL());
+		ResponseEntity<Object> response = restTemplate.exchange(createBalanceURL(), HttpMethod.GET,
+				setHeaderAndAuthToken(), Object.class);
+		if (response != null && response.getBody() != null) {
+			Map<String, String> responseMap = (Map<String, String>) response.getBody();
+			confirmBalance = new ConfirmBalance(responseMap.get("balance"));
+		}
+		return confirmBalance;
+	}
 
-    /**
-     * Description : <<WRITE DESCRIPTION HERE>>
-     * 
-     * @return
-     */
-    private String createBalanceURL() {
-        return ConfigReader.getBalanceURL().concat(ConfigReader.getCoinContractID()).concat("/balanceOf/")
-            .concat(ConfigReader.getMasterWalletID());
-    }
+	/**
+	 * Description : <<WRITE DESCRIPTION HERE>>
+	 * 
+	 * @return
+	 */
+	private String createBalanceURL() {
+		return ConfigReader.getBalanceURL().concat(ConfigReader.getCoinContractID()).concat("/balanceOf/")
+				.concat(ConfigReader.getMasterWalletID());
+	}
 
-    /**
-     * Description : <<WRITE DESCRIPTION HERE>>
-     * 
-     * @return
-     */
-    @Override
-    public ResponseEntity<Object> getTransactions() {
-        return restTemplate.exchange(ConfigReader.getTransactionsURL(), HttpMethod.GET, setHeaderAndAuthToken(),
-            Object.class);
-    }
+	/**
+	 * Description : <<WRITE DESCRIPTION HERE>>
+	 * 
+	 * @return
+	 */
+	@Override
+	public ResponseEntity<Object> getTransactions() {
+		return restTemplate.exchange(ConfigReader.getTransactionsURL(), HttpMethod.GET, setHeaderAndAuthToken(),
+				Object.class);
+	}
 
-    /**
-     * Description : <<WRITE DESCRIPTION HERE>>
-     * 
-     * @param emailID
-     * @return
-     * @throws InvalidRequestException
-     */
-    @Override
-    public ConfirmBalance getUserBalance(String emailID) throws InvalidRequestException {
-    	Optional<String> walletID = userDAO.getWalletID(emailID.toLowerCase());
-    	if (walletID.isPresent()) {
-    		return getBalance(walletID.get());
-    	}
-    	else {
-    		throw new InvalidRequestException("User Not Registered");
-    	}
-    }
+	/**
+	 * Description : <<WRITE DESCRIPTION HERE>>
+	 * 
+	 * @param emailID
+	 * @return
+	 * @throws InvalidRequestException
+	 */
+	@Override
+	public ConfirmBalance getUserBalance(String emailID) throws InvalidRequestException {
+		Optional<String> walletID = userDAO.getWalletID(emailID.toLowerCase());
+		if (walletID.isPresent()) {
+			return getBalance(walletID.get());
+		} else {
+			throw new InvalidRequestException("User Not Registered");
+		}
+	}
+	
+	@Override
+	public String rechargeUserBalance(String emailID) throws InvalidRequestException, TransferFailureException {
+		Optional<String> walletID = userDAO.getWalletID(emailID.toLowerCase());
+		if (walletID.isPresent()) {
+			return transferFunds(2500, ConfigReader.getMasterWalletID(), walletID.get());
+			
+		} else {
+			throw new InvalidRequestException("User Not Registered");
+		}
+	}
 
 	private ConfirmBalance getBalance(String walletId) throws InvalidRequestException {
 		StringBuffer url = generateURLWithWalletID(walletId);
 		return callBlockChainAndGenerateResponse(url);
 	}
 
-    /**
-     * Description : <<WRITE DESCRIPTION HERE>>
-     * 
-     * @param confirmBalance
-     * @param url
-     * @return
-     */
-    private ConfirmBalance callBlockChainAndGenerateResponse(StringBuffer url) {
-        ConfirmBalance confirmBalance = null;
-        ResponseEntity<Object> response = restTemplate.exchange(url.toString(), HttpMethod.GET, setHeaderAndAuthToken(),
-            Object.class);
-        if (response != null && response.getBody() != null) {
-            Map<String, String> responseMap = (Map<String, String>) response.getBody();
-            confirmBalance = new ConfirmBalance(responseMap.get("balance"));
+	/**
+	 * Description : <<WRITE DESCRIPTION HERE>>
+	 * 
+	 * @param confirmBalance
+	 * @param url
+	 * @return
+	 */
+	private ConfirmBalance callBlockChainAndGenerateResponse(StringBuffer url) {
+		ConfirmBalance confirmBalance = null;
+		ResponseEntity<Object> response = restTemplate.exchange(url.toString(), HttpMethod.GET, setHeaderAndAuthToken(),
+				Object.class);
+		if (response != null && response.getBody() != null) {
+			Map<String, String> responseMap = (Map<String, String>) response.getBody();
+			confirmBalance = new ConfirmBalance(responseMap.get("balance"));
 
-        }
-        return confirmBalance;
-    }
+		}
+		return confirmBalance;
+	}
 
-    /**
-     * Description : <<WRITE DESCRIPTION HERE>>
-     * 
-     * @param emailID
-     * @return
-     * @throws InvalidRequestException
-     */
-    private StringBuffer generateURLWithWalletID(String walletId) throws InvalidRequestException {
-        // StringBuffer url = new StringBuffer(
-        // "https://console-ko.kaleido.io/api/v1/ledger/k0z7nyu64x/k0xpgllhtz/tokens/contracts/0xe9eF258925b3A6B57c346785EEee063d199a3950/balanceOf");
-        StringBuffer url = new StringBuffer(ConfigReader.getBalanceURL()).append(ConfigReader.getCoinContractID())
-            .append("/balanceOf").append("/").append(walletId);
-        return url;
-    }
+	/**
+	 * Description : <<WRITE DESCRIPTION HERE>>
+	 * 
+	 * @param emailID
+	 * @return
+	 * @throws InvalidRequestException
+	 */
+	private StringBuffer generateURLWithWalletID(String walletId) throws InvalidRequestException {
+		// StringBuffer url = new StringBuffer(
+		// "https://console-ko.kaleido.io/api/v1/ledger/k0z7nyu64x/k0xpgllhtz/tokens/contracts/0xe9eF258925b3A6B57c346785EEee063d199a3950/balanceOf");
+		StringBuffer url = new StringBuffer(ConfigReader.getBalanceURL()).append(ConfigReader.getCoinContractID())
+				.append("/balanceOf").append("/").append(walletId);
+		return url;
+	}
 
-    /**
-     * Description : <<WRITE DESCRIPTION HERE>>
-     * 
-     * @return
-     */
-    private HttpEntity<String> setHeaderAndAuthToken() {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(ConfigReader.getBearerToken());
-        HttpEntity<String> entity = new HttpEntity<String>(headers);
-        return entity;
-    }
+	/**
+	 * Description : <<WRITE DESCRIPTION HERE>>
+	 * 
+	 * @return
+	 */
+	private HttpEntity<String> setHeaderAndAuthToken() {
+		HttpHeaders headers = new HttpHeaders();
+		headers.setContentType(MediaType.APPLICATION_JSON);
+		headers.setBearerAuth(ConfigReader.getBearerToken());
+		HttpEntity<String> entity = new HttpEntity<String>(headers);
+		return entity;
+	}
 
-    /**
-     * Description : <<WRITE DESCRIPTION HERE>>
-     * 
-     * @return
-     * @throws RegistrationException
-     */
-    @Override
-    public ConfirmWalletID createNewWalletOnBlockChain() throws RegistrationException {
-        ConfirmWalletID confirmWID = null;
-        HttpHeaders headers = new HttpHeaders();
-        MediaType mediaType = new MediaType("application", "json");
-        headers.setContentType(mediaType);
-        headers.set("Authorization", "Bearer " + ConfigReader.getBearerToken());
-        String requestJson = "{ \"password\": \"anything\" }";
-        HttpEntity<String> entity = new HttpEntity<String>(requestJson, headers);
-        ResponseEntity<Object> result;
-        try {
-            result = restTemplate.exchange(ConfigReader.getWalletCreationURL(), HttpMethod.POST, entity, Object.class);
-            if (result != null && result.getBody() != null) {
-                Map<String, String> responseMap = (Map<String, String>) result.getBody();
-                confirmWID = new ConfirmWalletID("0x" + responseMap.get("address"));
-            }
-        }
-        catch (RestClientException e) {
-        	e.printStackTrace();
-            throw new RegistrationException("Couldn't create wallet account");
-        }
-        return confirmWID;
-    }
+	/**
+	 * Description : <<WRITE DESCRIPTION HERE>>
+	 * 
+	 * @return
+	 * @throws RegistrationException
+	 */
+	@Override
+	public ConfirmWalletID createNewWalletOnBlockChain() throws RegistrationException {
+		ConfirmWalletID confirmWID = null;
+		HttpHeaders headers = new HttpHeaders();
+		MediaType mediaType = new MediaType("application", "json");
+		headers.setContentType(mediaType);
+		headers.set("Authorization", "Bearer " + ConfigReader.getBearerToken());
+		String requestJson = "{ \"password\": \"anything\" }";
+		HttpEntity<String> entity = new HttpEntity<String>(requestJson, headers);
+		ResponseEntity<Object> result;
+		try {
+			result = restTemplate.exchange(ConfigReader.getWalletCreationURL(), HttpMethod.POST, entity, Object.class);
+			if (result != null && result.getBody() != null) {
+				Map<String, String> responseMap = (Map<String, String>) result.getBody();
+				confirmWID = new ConfirmWalletID("0x" + responseMap.get("address"));
+			}
+		} catch (RestClientException e) {
+			e.printStackTrace();
+			throw new RegistrationException("Couldn't create wallet account");
+		}
+		return confirmWID;
+	}
 
-    /**
-     * Description : <<WRITE DESCRIPTION HERE>>
-     * 
-     * @param emailID
-     * @return
-     */
-    @Override
-    public List<Transactions> getSpecificTokenTransactions(String emailID) {
-        List<Transactions> filteredTransactions = null;
-        Optional<String> walletID = userDAO.getWalletID(emailID);
-        if (walletID.isPresent()) {
-            ResponseEntity<TransactionResultSet> last25Transactions = restTemplate.exchange(
-                ConfigReader.getBalanceURL().concat(ConfigReader.getCoinContractID().concat("/transfers")),
-                HttpMethod.GET, setHeaderAndAuthToken(), TransactionResultSet.class);
-            filteredTransactions = new ArrayList<Transactions>();
-            for (Transactions transaction : last25Transactions.getBody().getTransactions()) {
-                if (walletID.get().equalsIgnoreCase(transaction.getFrom())
-                    || walletID.get().equalsIgnoreCase(transaction.getTo())) {
-                    filteredTransactions.add(transaction);
-                }
-                else {
-                    for (Events event : transaction.getEvents()) {
-                        if (walletID.get().equalsIgnoreCase(event.getFrom())
-                            || walletID.get().equalsIgnoreCase(event.getTo())) {
-                            filteredTransactions.add(transaction);
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-        return filteredTransactions;
-    }
+	/**
+	 * Description : <<WRITE DESCRIPTION HERE>>
+	 * 
+	 * @param emailID
+	 * @return
+	 */
+	@Override
+	public List<Transactions> getSpecificTokenTransactions(String emailID) {
+		List<Transactions> filteredTransactions = null;
+		Optional<String> walletID = userDAO.getWalletID(emailID);
+		if (walletID.isPresent()) {
+			ResponseEntity<TransactionResultSet> last25Transactions = restTemplate.exchange(
+					ConfigReader.getBalanceURL().concat(ConfigReader.getCoinContractID().concat("/transfers")),
+					HttpMethod.GET, setHeaderAndAuthToken(), TransactionResultSet.class);
+			filteredTransactions = new ArrayList<Transactions>();
+			for (Transactions transaction : last25Transactions.getBody().getTransactions()) {
+				if (walletID.get().equalsIgnoreCase(transaction.getFrom())
+						|| walletID.get().equalsIgnoreCase(transaction.getTo())) {
+					filteredTransactions.add(transaction);
+				} else {
+					for (Events event : transaction.getEvents()) {
+						if (walletID.get().equalsIgnoreCase(event.getFrom())
+								|| walletID.get().equalsIgnoreCase(event.getTo())) {
+							filteredTransactions.add(transaction);
+							break;
+						}
+					}
+				}
+			}
+		}
+		return filteredTransactions;
+	}
 
-    /**
-     * Description : <<WRITE DESCRIPTION HERE>>
-     * 
-     * @return
-     * @throws InvalidRequestException
-     */
-    @Override
+	/**
+	 * Description : <<WRITE DESCRIPTION HERE>>
+	 * 
+	 * @return
+	 * @throws InvalidRequestException
+	 */
+	@Override
 	public ReconciliationReport generateReconciliationReport(String emailID) throws InvalidRequestException {
 		ReconciliationReport report = new ReconciliationReport();
 		ConfirmBalance sabreBalance = null;
@@ -593,78 +590,77 @@ public class MintoServiceImpl implements MintoService {
 		return report;
 	}
 
-    /**
-     * Description : <<WRITE DESCRIPTION HERE>>
-     * 
-     * @param packageID
-     * @return
-     */
-    @Override
-    public ConfirmBooking initiateTransfers(Integer packageID, String emailID) {
-        String transferURL = createURL();
-        Optional<String> loggedInUserWalletID = userDAO.getWalletID(emailID);
-        Optional<String> deltaAirlinesWalletID = userDAO.getWalletID("delta.airlines@sabrepay.com");
-        Optional<String> uberCabsWalletID = userDAO.getWalletID("Uber.cabs@sabrepay.com");
-        Optional<String> marriotHotelWalletID = userDAO.getWalletID("marriot.hotel@sabrepay.com");
-        Integer flightCharges = 0, hotelCharges = 0, cabCharges = 0;
-        switch (packageID) {
-            case 1:
-                flightCharges = 10;
-                hotelCharges = 5;
-                cabCharges = 5;
-                break;
-            case 2:
-                flightCharges = 15;
-                hotelCharges = 4;
-                cabCharges = 5;
-                break;
-            case 3:
-                flightCharges = 20;
-                hotelCharges = 10;
-                cabCharges = 7;
-                break;
-        }
-        try {
-            restTemplate.postForObject(transferURL,
-                createRequestJsonWithHeaders(loggedInUserWalletID, deltaAirlinesWalletID, flightCharges), Object.class);
-        }
-        catch (Exception ex) {
+	/**
+	 * Description : <<WRITE DESCRIPTION HERE>>
+	 * 
+	 * @param packageID
+	 * @return
+	 */
+	@Override
+	public ConfirmBooking initiateTransfers(Integer packageID, String emailID) {
+		String transferURL = createURL();
+		Optional<String> loggedInUserWalletID = userDAO.getWalletID(emailID);
+		Optional<String> deltaAirlinesWalletID = userDAO.getWalletID("delta.airlines@sabrepay.com");
+		Optional<String> uberCabsWalletID = userDAO.getWalletID("Uber.cabs@sabrepay.com");
+		Optional<String> marriotHotelWalletID = userDAO.getWalletID("marriot.hotel@sabrepay.com");
+		Integer flightCharges = 0, hotelCharges = 0, cabCharges = 0;
+		switch (packageID) {
+		case 1:
+			flightCharges = 10;
+			hotelCharges = 5;
+			cabCharges = 5;
+			break;
+		case 2:
+			flightCharges = 15;
+			hotelCharges = 4;
+			cabCharges = 5;
+			break;
+		case 3:
+			flightCharges = 20;
+			hotelCharges = 10;
+			cabCharges = 7;
+			break;
+		}
+		try {
+			restTemplate.postForObject(transferURL,
+					createRequestJsonWithHeaders(loggedInUserWalletID, deltaAirlinesWalletID, flightCharges),
+					Object.class);
+		} catch (Exception ex) {
 
-        }
-        try {
-            restTemplate.postForObject(transferURL,
-                createRequestJsonWithHeaders(loggedInUserWalletID, uberCabsWalletID, cabCharges), Object.class);
-        }
-        catch (Exception ex) {
+		}
+		try {
+			restTemplate.postForObject(transferURL,
+					createRequestJsonWithHeaders(loggedInUserWalletID, uberCabsWalletID, cabCharges), Object.class);
+		} catch (Exception ex) {
 
-        }
-        try {
-            restTemplate.postForObject(transferURL,
-                createRequestJsonWithHeaders(loggedInUserWalletID, marriotHotelWalletID, hotelCharges), Object.class);
-        }
-        catch (Exception ex) {
+		}
+		try {
+			restTemplate.postForObject(transferURL,
+					createRequestJsonWithHeaders(loggedInUserWalletID, marriotHotelWalletID, hotelCharges),
+					Object.class);
+		} catch (Exception ex) {
 
-        }
-        return new ConfirmBooking("Amounts transferred successfully");
-    }
-    
-    @Override
+		}
+		return new ConfirmBooking("Amounts transferred successfully");
+	}
+
+	@Override
 	public ConfirmBooking makePayment(@Valid PaymentDTO paymentDTO)
 			throws AuthenticationFailureException, InvalidRequestException, TransferFailureException {
-    	User user = findUser(paymentDTO.getEmail());
-    	String transactionId = null;
-    	if (user != null && user.getWalletID() != null) {
-    		boolean isFaceIdMatched = isFaceMatched(paymentDTO.getFaceId(), user);
-    		if (isFaceIdMatched) {
-    			Optional<String> partnerWalletID = userDAO.getWalletIDByName(paymentDTO.getPartner());
-    			transactionId = transferFunds(paymentDTO.getAmount(), user.getWalletID(), partnerWalletID.get());
-    		}
-    	}
-    	
-    	return new ConfirmBooking("Booking successfull", transactionId);
+		User user = findUser(paymentDTO.getEmail());
+		String transactionId = null;
+		if (user != null && user.getWalletID() != null) {
+			boolean isFaceIdMatched = isFaceMatched(paymentDTO.getFaceId(), user);
+			if (isFaceIdMatched) {
+				Optional<String> partnerWalletID = userDAO.getWalletIDByName(paymentDTO.getPartner());
+				transactionId = transferFunds(paymentDTO.getAmount(), user.getWalletID(), partnerWalletID.get());
+			}
+		}
+
+		return new ConfirmBooking("Booking successfull", transactionId);
 	}
-    
-    private InvoiceInfo getInvoiceInfo(ExpenseDTO expense, byte[] bs) throws TesseractException {
+
+	private InvoiceInfo getInvoiceInfo(ExpenseDTO expense, byte[] bs) throws TesseractException {
 		if (expense.getFileName() == null && bs == null) {
 			return null;
 		}
@@ -676,31 +672,29 @@ public class MintoServiceImpl implements MintoService {
 		if (decoder == null) {
 			decoder = Base64.getDecoder().decode(expense.getDocument().split(";base64,")[1]);
 		}
-		File tempFile = new File(System.getProperty("java.io.tmpdir")+"/" + fileName);
-		try ( FileOutputStream fos = new FileOutputStream(tempFile); ) {
-		      fos.write(decoder);
-		      
-		    } catch (Exception e) {
-		      e.printStackTrace();
-		    }
+		File tempFile = new File(System.getProperty("java.io.tmpdir") + "/" + fileName);
+		try (FileOutputStream fos = new FileOutputStream(tempFile);) {
+			fos.write(decoder);
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 		ITesseract instance = new Tesseract();
-	      try 
-	      {	
-	    	  URL resource = getClass().getResource("/data");
-	    	 instance.setDatapath(resource.getPath().substring(1)); 
-	         return processImgeText(instance.doOCR(tempFile));
-	      } 
-	      finally {
-	    	  tempFile.delete();
+		try {
+			URL resource = getClass().getResource("/data");
+			instance.setDatapath(resource.getPath().substring(1));
+			return processImgeText(instance.doOCR(tempFile));
+		} finally {
+			tempFile.delete();
 		}
 	}
-    
-    private InvoiceInfo processImgeText(String imgText) {
+
+	private InvoiceInfo processImgeText(String imgText) {
 		System.out.println(imgText);
 		InvoiceInfo resp = new InvoiceInfo();
 		String[] split = imgText.split("\n");
 		Optional<String> date = Arrays.stream(split).filter(str -> str.startsWith("Date : ")).findFirst();
-		if(date.isPresent()) {
+		if (date.isPresent()) {
 			SimpleDateFormat sf = new SimpleDateFormat("EEE, d MMM yyyy");
 			String substring = date.get().substring("Date : ".length());
 			try {
@@ -711,26 +705,26 @@ public class MintoServiceImpl implements MintoService {
 				e.printStackTrace();
 			}
 		}
-		
+
 		Optional<String> total = Arrays.stream(split).filter(str -> str.startsWith("Total Price: ")).findFirst();
 		if (total.isPresent()) {
 			resp.setAmmount(total.get().substring("Total Price: ".length()));
 		}
-		
+
 		Optional<String> txId = Arrays.stream(split).filter(str -> str.startsWith("Ref: ")).findFirst();
 		if (txId.isPresent()) {
 			resp.setTxnId(txId.get().substring("Ref: ".length()));
 		}
-		for (int i = split.length-1; i >= 0; i--) {
+		for (int i = split.length - 1; i >= 0; i--) {
 			String str = split[i].trim();
-			if(str.startsWith("For")&& str.contains(":")) {
-				resp.setMerchant(str.substring(3,str.indexOf(':')-1).trim());
+			if (str.startsWith("For") && str.contains(":")) {
+				resp.setMerchant(str.substring(3, str.indexOf(':') - 1).trim());
 				break;
 			}
 		}
 		return resp;
 	}
-    
+
 	@Override
 	public ConfirmBooking processBooking(PackageDTO packageDTO)
 			throws AuthenticationFailureException, InvalidRequestException, TransferFailureException {
@@ -744,12 +738,8 @@ public class MintoServiceImpl implements MintoService {
 				if (Integer.valueOf(balance.getBalance()) > total) {
 					transactionId = transferFundsToAdmin(total, user.getWalletID());
 					TravelInfo travelInfo = addTravelInfo(user, packageDTO.getTravelInfo());
-					byte[] invoice = generateInvoice(packageDTO, user, travelInfo.getTravelId(), transactionId, total);
-					travelInfo.setInvoice(invoice);
-					travelDAO.save(travelInfo);
 					createBookings(packageDTO, user);
-					sendMail(invoice, user.getEmail());
-					processFundsToMerchants(packageDTO);
+					postProcess(packageDTO, user, transactionId, total, travelInfo.getTravelId());
 				} else {
 					throw new TransferFailureException("Insufficient Funds");
 				}
@@ -759,6 +749,28 @@ public class MintoServiceImpl implements MintoService {
 		}
 
 		return new ConfirmBooking("Booking successfull", transactionId);
+	}
+
+	private void postProcess(PackageDTO packageDTO, User user, String transactionId, Integer total,
+			Integer travelId) {
+		processFundsToMerchants(packageDTO);
+		processInvoice(packageDTO, user, transactionId, total, travelId);
+	}
+
+	private void processInvoice(PackageDTO packageDTO, User user, String transactionId, Integer total,
+			Integer travelId) {
+		Thread th = new Thread(() ->  {
+			try {
+				byte[]  invoice = generateInvoice(packageDTO, user, travelId, transactionId, total);
+				TravelInfo travelInfo = getTravelInfo(travelId);
+				travelInfo.setInvoice(invoice);
+				travelDAO.save(travelInfo);
+				sendMail(invoice, user.getEmail());
+			} catch (InvalidRequestException e) {
+				e.printStackTrace();
+			}
+		});
+		th.start();
 	}
 
 	private byte[] generateInvoice(PackageDTO packageDTO, User user, Integer travelId, String transactionId,
@@ -834,7 +846,7 @@ public class MintoServiceImpl implements MintoService {
 	}
 
 	private void processFundsToMerchants(PackageDTO packageDTO) {
-		Thread th = new Thread(()->transferFunds(packageDTO));
+		Thread th = new Thread(() -> transferFunds(packageDTO));
 		th.start();
 	}
 
@@ -846,19 +858,18 @@ public class MintoServiceImpl implements MintoService {
 			throws TransferFailureException {
 		String transactionId = null;
 		String transferURL = createURL();
-    	LinkedHashMap<String, LinkedHashMap<String, Object>> result = null;
-    	try {
-    		result = (LinkedHashMap<String, LinkedHashMap<String, Object>>) restTemplate.postForObject(transferURL,
-    				createRequestJsonWithHeaders(fromWalletId, toWalletId, total), Object.class);
-    	}
-    	catch (Exception ex) {
-    		ex.printStackTrace();
-    		throw new TransferFailureException("Transfer Failed");
-    	}
-    	if (result != null && result.get("result") != null) {
-    		LinkedHashMap<String, Object> resultMap = result.get("result");
-    		transactionId = (String) resultMap.get("blockHash");
-    	}
+		LinkedHashMap<String, LinkedHashMap<String, Object>> result = null;
+		try {
+			result = (LinkedHashMap<String, LinkedHashMap<String, Object>>) restTemplate.postForObject(transferURL,
+					createRequestJsonWithHeaders(fromWalletId, toWalletId, total), Object.class);
+		} catch (Exception ex) {
+			ex.printStackTrace();
+			throw new TransferFailureException("Transfer Failed");
+		}
+		if (result != null && result.get("result") != null) {
+			LinkedHashMap<String, Object> resultMap = result.get("result");
+			transactionId = (String) resultMap.get("blockHash");
+		}
 		return transactionId;
 	}
 
@@ -924,86 +935,83 @@ public class MintoServiceImpl implements MintoService {
 
 	private User findUser(String email) throws AuthenticationFailureException {
 		User user = null;
-    	try {
+		try {
 			List<User> users = userDAO.getUsers(email);
 			if (users != null && !users.isEmpty()) {
 				user = users.get(0);
+			} else {
+				throw new AuthenticationFailureException("User Not Registered");
 			}
-        	else {
-        		throw new AuthenticationFailureException("User Not Registered");
-        	}
-        }
-        catch (Exception e) {
-            throw new AuthenticationFailureException("Unable to get User");
-        }
+		} catch (Exception e) {
+			throw new AuthenticationFailureException("Unable to get User");
+		}
 		return user;
 	}
 
 	private void transferFunds(PackageDTO packageDTO) {
 		String transferURL = createURL();
-    	for (PackageBookingDTO bookingDTO : packageDTO.getBookings()) {
-    		Optional<String> partnerWalletID = userDAO.getWalletIDByName(bookingDTO.getPartner());
-    		try {
-    			restTemplate.postForObject(transferURL,
-    					createRequestJsonWithHeaders(ConfigReader.getMasterWalletID(), partnerWalletID.get(), bookingDTO.getAmount()), Object.class);
-    		}
-    		catch (Exception ex) {
-    			ex.printStackTrace();
-    		}
-    	}
+		for (PackageBookingDTO bookingDTO : packageDTO.getBookings()) {
+			Optional<String> partnerWalletID = userDAO.getWalletIDByName(bookingDTO.getPartner());
+			try {
+				restTemplate.postForObject(transferURL, createRequestJsonWithHeaders(ConfigReader.getMasterWalletID(),
+						partnerWalletID.get(), bookingDTO.getAmount()), Object.class);
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			}
+		}
 	}
 
-    /**
-     * Description : <<WRITE DESCRIPTION HERE>>
-     * 
-     * @param loggedInUserWalletID
-     * @param deltaAirlinesWalletID
-     * @param flightCharges
-     * @return
-     */
-    private HttpEntity<String> createRequestJsonWithHeaders(Optional<String> loggedInUserWalletID,
-        Optional<String> toAddress, Integer amount) {
-        String requestJSON = "{\"toAddress\" : \"0x" + toAddress.get() + "\", \"amount\" : " + amount
-            + ", \"from\" : \"0x" + loggedInUserWalletID.get() + "\"}";
-        System.out.println(requestJSON);
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBasicAuth(ConfigReader.getAuthUserName(), ConfigReader.getAuthPWD());
-        HttpEntity<String> request = new HttpEntity<String>(requestJSON, headers);
-        return request;
-    }
-    
-    /**
-     * Description : <<WRITE DESCRIPTION HERE>>
-     * 
-     * @param loggedInUserWalletID
-     * @param deltaAirlinesWalletID
-     * @param flightCharges
-     * @return
-     */
-    private HttpEntity<String> createRequestJsonWithHeaders(String loggedInUserWalletID,
-        String toAddress, Integer amount) {
-        String requestJSON = "{\"toAddress\" : \"" + toAddress + "\", \"amount\" : " + amount
-            + ", \"from\" : \"" + loggedInUserWalletID + "\"}";
-        System.out.println(requestJSON);
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBasicAuth(ConfigReader.getAuthUserName(), ConfigReader.getAuthPWD());
-        HttpEntity<String> request = new HttpEntity<String>(requestJSON, headers);
-        return request;
-    }
+	/**
+	 * Description : <<WRITE DESCRIPTION HERE>>
+	 * 
+	 * @param loggedInUserWalletID
+	 * @param deltaAirlinesWalletID
+	 * @param flightCharges
+	 * @return
+	 */
+	private HttpEntity<String> createRequestJsonWithHeaders(Optional<String> loggedInUserWalletID,
+			Optional<String> toAddress, Integer amount) {
+		String requestJSON = "{\"toAddress\" : \"0x" + toAddress.get() + "\", \"amount\" : " + amount
+				+ ", \"from\" : \"0x" + loggedInUserWalletID.get() + "\"}";
+		System.out.println(requestJSON);
+		HttpHeaders headers = new HttpHeaders();
+		headers.setContentType(MediaType.APPLICATION_JSON);
+		headers.setBasicAuth(ConfigReader.getAuthUserName(), ConfigReader.getAuthPWD());
+		HttpEntity<String> request = new HttpEntity<String>(requestJSON, headers);
+		return request;
+	}
 
-    /**
-     * Description : <<WRITE DESCRIPTION HERE>>
-     * 
-     * @return
-     */
-    private String createURL() {
-        StringBuilder url = new StringBuilder(ConfigReader.getFundWalletURL());
-        url.append(ConfigReader.getCoinContractID()).append("/transfer");
-        // TODO Auto-generated method stub
-        return url.toString();
-    }
+	/**
+	 * Description : <<WRITE DESCRIPTION HERE>>
+	 * 
+	 * @param loggedInUserWalletID
+	 * @param deltaAirlinesWalletID
+	 * @param flightCharges
+	 * @return
+	 */
+	private HttpEntity<String> createRequestJsonWithHeaders(String loggedInUserWalletID, String toAddress,
+			Integer amount) {
+		String requestJSON = "{\"toAddress\" : \"" + toAddress + "\", \"amount\" : " + amount + ", \"from\" : \""
+				+ loggedInUserWalletID + "\"}";
+		System.out.println(requestJSON);
+		HttpHeaders headers = new HttpHeaders();
+		headers.setContentType(MediaType.APPLICATION_JSON);
+		headers.setBasicAuth(ConfigReader.getAuthUserName(), ConfigReader.getAuthPWD());
+		HttpEntity<String> request = new HttpEntity<String>(requestJSON, headers);
+		return request;
+	}
+
+	/**
+	 * Description : <<WRITE DESCRIPTION HERE>>
+	 * 
+	 * @return
+	 */
+	private String createURL() {
+		StringBuilder url = new StringBuilder(ConfigReader.getFundWalletURL());
+		url.append(ConfigReader.getCoinContractID()).append("/transfer");
+		// TODO Auto-generated method stub
+		return url.toString();
+	}
 
 	@Override
 	public List<TravelInfoDTO> getTravelInfo(String email) {
@@ -1011,7 +1019,7 @@ public class MintoServiceImpl implements MintoService {
 		List<Object[]> travelInfos = userDAO.getTravelInfos(email);
 		for (Object[] travelInfo : travelInfos) {
 			TravelInfoDTO travelInfoDTO = new TravelInfoDTO();
-			travelInfoDTO.setId((Integer)travelInfo[0]);
+			travelInfoDTO.setId((Integer) travelInfo[0]);
 			travelInfoDTO.setTravelInfo(new String((byte[]) travelInfo[1]));
 			travelInfoList.add(travelInfoDTO);
 		}
@@ -1031,7 +1039,7 @@ public class MintoServiceImpl implements MintoService {
 		}
 		return mapToDTO(bookings);
 	}
-	
+
 	private List<BookingDTO> mapToDTO(List<Booking> bookings) {
 		List<BookingDTO> bookingDTOs = null;
 		if (bookings != null) {
@@ -1111,7 +1119,7 @@ public class MintoServiceImpl implements MintoService {
 	}
 
 	@Override
-	//@Async
+	// @Async
 	public void addExpense(@Valid List<ExpenseDTO> expenses) throws InvalidRequestException, TesseractException {
 		TravelInfo travelInfo = null;
 		for (ExpenseDTO expenseDTO : expenses) {
@@ -1136,7 +1144,7 @@ public class MintoServiceImpl implements MintoService {
 		}
 		travelDAO.save(travelInfo);
 	}
-	
+
 	@Override
 	public Set<ExpenseInfo> getExpenses(Integer travelId) throws InvalidRequestException {
 		Set<ExpenseInfo> expenses = null;
@@ -1158,72 +1166,65 @@ public class MintoServiceImpl implements MintoService {
 		}
 		return travelInfo;
 	}
-	
+
 	private byte[] createInvoice(Invoice invoice) {
-        try {
+		try {
 
-            Map<String, Object> parameters = new HashMap<>();
-            parameters.put("invoice", invoice);
-            JasperReport report = (JasperReport) JRLoader
-                .loadObject(this.getClass().getResourceAsStream("/invoice.jasper"));
-            JasperPrint jasperPrint = JasperFillManager.fillReport(report, parameters, new JREmptyDataSource());
-            byte[] pdfReport = JasperExportManager.exportReportToPdf(jasperPrint);
-            return pdfReport;
-        }
-        catch (Exception e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-	
-	private void sendMail(byte[] invoicePdf ,String email) {
-
-        Thread th = new Thread(() -> {
-        	Properties props = new Properties();
-        	props.put("mail.smtp.auth", "true");
-        	props.put("mail.smtp.starttls.enable", "true");
-        	props.put("mail.smtp.host", host);
-        	props.put("mail.smtp.port", port);
-        	
-        	// Get the Session object.
-        	Session session = Session.getInstance(props, new javax.mail.Authenticator() {
-        		protected PasswordAuthentication getPasswordAuthentication() {
-        			return new PasswordAuthentication(username, password);
-        		}
-        	});
-        	
-        	try {
-        		Message message = new MimeMessage(session);
-        		message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(email));
-        		
-        		message.setSubject("Invoice From Swift Corporate  Booking" );
-        		
-        		BodyPart messageBodyPart = new MimeBodyPart();
-        		
-        		messageBodyPart.setText("Please Find the attached Invoice");
-        		
-        		Multipart multipart = new MimeMultipart();
-        		
-        		multipart.addBodyPart(messageBodyPart);
-        		
-        		messageBodyPart = new MimeBodyPart();
-        		DataSource source = new ByteArrayDataSource(invoicePdf, "application/pdf");
-        		messageBodyPart.setDataHandler(new DataHandler(source));
-        		messageBodyPart.setFileName("Invoice.pdf");
-        		multipart.addBodyPart(messageBodyPart);
-        		
-        		message.setContent(multipart);
-        		
-        		Transport.send(message);
-        		
-        	}
-        	catch (MessagingException e) {
-        		throw new RuntimeException(e);
-        	}
-        });
-        th.start();
+			Map<String, Object> parameters = new HashMap<>();
+			parameters.put("invoice", invoice);
+			JasperReport report = (JasperReport) JRLoader
+					.loadObject(this.getClass().getResourceAsStream("/invoice.jasper"));
+			JasperPrint jasperPrint = JasperFillManager.fillReport(report, parameters, new JREmptyDataSource());
+			byte[] pdfReport = JasperExportManager.exportReportToPdf(jasperPrint);
+			return pdfReport;
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return null;
 	}
-        
 
+	private void sendMail(byte[] invoicePdf, String email) {
+
+		Properties props = new Properties();
+		props.put("mail.smtp.auth", "true");
+		props.put("mail.smtp.starttls.enable", "true");
+		props.put("mail.smtp.host", host);
+		props.put("mail.smtp.port", port);
+
+		// Get the Session object.
+		Session session = Session.getInstance(props, new javax.mail.Authenticator() {
+			protected PasswordAuthentication getPasswordAuthentication() {
+				return new PasswordAuthentication(username, password);
+			}
+		});
+
+		try {
+			Message message = new MimeMessage(session);
+			message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(email));
+
+			message.setSubject("Invoice From Swift Corporate  Booking");
+
+			BodyPart messageBodyPart = new MimeBodyPart();
+
+			messageBodyPart.setText("Please Find the attached Invoice");
+
+			Multipart multipart = new MimeMultipart();
+
+			multipart.addBodyPart(messageBodyPart);
+
+			messageBodyPart = new MimeBodyPart();
+			DataSource source = new ByteArrayDataSource(invoicePdf, "application/pdf");
+			messageBodyPart.setDataHandler(new DataHandler(source));
+			messageBodyPart.setFileName("Invoice.pdf");
+			multipart.addBodyPart(messageBodyPart);
+
+			message.setContent(multipart);
+
+			Transport.send(message);
+
+		} catch (MessagingException e) {
+			throw new RuntimeException(e);
+		}
+	}
 
 }
