@@ -5,6 +5,7 @@ package com.mindtree.minto.service;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.net.URL;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -135,6 +136,21 @@ public class MintoServiceImpl implements MintoService {
 
 	@Autowired
 	RestTemplate restTemplate;
+	{
+	    File tempFile = new File(System.getProperty("java.io.tmpdir") + "/" + "eng.traineddata");
+	    log.info(System.getProperty("java.io.tmpdir"));
+	    if(!tempFile.exists()) {
+
+	        log.info("xxxxxxxxxxxxx");
+	        try (FileOutputStream fos = new FileOutputStream(tempFile);) {
+	            byte[] bytes = this.getClass().getResourceAsStream("data/eng.traineddata").toString().getBytes();
+	            fos.write(bytes);
+
+	        } catch (Exception e) {
+	            e.printStackTrace();
+	        }
+	    }
+	}
 
 	/**
 	 * Description : <<WRITE DESCRIPTION HERE>>
@@ -681,9 +697,9 @@ public class MintoServiceImpl implements MintoService {
 		}
 		ITesseract instance = new Tesseract();
 		try {
-			URL resource = getClass().getResource("/data");
-			System.out.println(resource.getPath().substring(1));
-			instance.setDatapath(resource.getPath().substring(1));
+			//URL resource = getClass().getResource(System.getProperty("java.io.tmpdir") );
+			log.info(System.getProperty("java.io.tmpdir") );
+			instance.setDatapath(System.getProperty("java.io.tmpdir") );
 			return processImgeText(instance.doOCR(tempFile));
 		} finally {
 			tempFile.delete();
