@@ -140,7 +140,7 @@ public class MintoServiceImpl implements MintoService {
 	    if(!tempFile.exists()) {
 	        log.info("new data file");
 	        try (FileOutputStream fos = new FileOutputStream(tempFile);) {
-	            byte[] bytes = IOUtils.toByteArray(this.getClass().getResourceAsStream("data/eng.traineddata"));
+	            byte[] bytes = IOUtils.toByteArray(this.getClass().getResourceAsStream("/data/eng.traineddata"));
 	            fos.write(bytes);
 
 	        } catch (Exception e) {
