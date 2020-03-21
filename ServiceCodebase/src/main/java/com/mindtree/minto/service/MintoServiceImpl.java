@@ -682,6 +682,7 @@ public class MintoServiceImpl implements MintoService {
 		ITesseract instance = new Tesseract();
 		try {
 			URL resource = getClass().getResource("/data");
+			System.out.println(resource.getPath().substring(1));
 			instance.setDatapath(resource.getPath().substring(1));
 			return processImgeText(instance.doOCR(tempFile));
 		} finally {
