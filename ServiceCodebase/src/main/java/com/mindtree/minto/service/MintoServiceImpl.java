@@ -140,11 +140,11 @@ public class MintoServiceImpl implements MintoService {
 	}
 
     private void staticInit() {
-        File tempFile = new File(System.getProperty("java.io.tmpdir") + "/" + "eng.traineddata");
+        File tempFile = new File(System.getProperty("C:\\Users\\swift\\AppData\\Local\\Temp") + "/" + "eng.traineddata");
 	    if(!tempFile.exists()) {
 	        log.info("new data file");
 	        try (FileOutputStream fos = new FileOutputStream(tempFile);) {
-	            byte[] bytes = IOUtils.toByteArray(this.getClass().getResourceAsStream("data/eng.traineddata"));
+	            byte[] bytes = IOUtils.toByteArray(this.getClass().getResourceAsStream("/data/eng.traineddata"));
 	            fos.write(bytes);
 
 	        } catch (Exception e) {
