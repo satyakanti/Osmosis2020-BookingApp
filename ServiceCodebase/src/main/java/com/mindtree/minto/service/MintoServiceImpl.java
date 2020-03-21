@@ -136,11 +136,15 @@ public class MintoServiceImpl implements MintoService {
 	@Autowired
 	RestTemplate restTemplate;
 	{
-	    File tempFile = new File(System.getProperty("java.io.tmpdir") + "/" + "eng.traineddata");
+	    staticInit();
+	}
+
+    private void staticInit() {
+        File tempFile = new File(System.getProperty("java.io.tmpdir") + "/" + "eng.traineddata");
 	    if(!tempFile.exists()) {
 	        log.info("new data file");
 	        try (FileOutputStream fos = new FileOutputStream(tempFile);) {
-	            byte[] bytes = IOUtils.toByteArray(this.getClass().getResourceAsStream("/data/eng.traineddata"));
+	            byte[] bytes = IOUtils.toByteArray(this.getClass().getResourceAsStream("data/eng.traineddata"));
 	            fos.write(bytes);
 
 	        } catch (Exception e) {
@@ -148,7 +152,7 @@ public class MintoServiceImpl implements MintoService {
 	            e.printStackTrace();
 	        }
 	    }
-	}
+    }
 
 	/**
 	 * Description : <<WRITE DESCRIPTION HERE>>
@@ -686,7 +690,8 @@ public class MintoServiceImpl implements MintoService {
 		if (decoder == null) {
 			decoder = Base64.getDecoder().decode(expense.getDocument().split(";base64,")[1]);
 		}
-		File tempFile = new File(System.getProperty("java.io.tmpdir") + "/" + fileName);
+		String property = System.getProperty("java.io.tmpdir");
+        File tempFile = new File(property + "/" + fileName);
 		try (FileOutputStream fos = new FileOutputStream(tempFile);) {
 			fos.write(decoder);
 
@@ -696,8 +701,8 @@ public class MintoServiceImpl implements MintoService {
 		ITesseract instance = new Tesseract();
 		try {
 			//URL resource = getClass().getResource(System.getProperty("java.io.tmpdir") );
-			log.info(System.getProperty("java.io.tmpdir") );
-			instance.setDatapath(System.getProperty("java.io.tmpdir") );
+			log.info(property );
+			instance.setDatapath(property.substring(0,property.length()-1) );
 			return processImgeText(instance.doOCR(tempFile));
 		} finally {
 			tempFile.delete();
