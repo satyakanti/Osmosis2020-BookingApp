@@ -5,8 +5,6 @@ package com.mindtree.minto.service;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.InputStream;
-import java.net.URL;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -38,6 +36,7 @@ import javax.mail.internet.MimeMultipart;
 import javax.mail.util.ByteArrayDataSource;
 import javax.validation.Valid;
 
+import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -138,15 +137,14 @@ public class MintoServiceImpl implements MintoService {
 	RestTemplate restTemplate;
 	{
 	    File tempFile = new File(System.getProperty("java.io.tmpdir") + "/" + "eng.traineddata");
-	    log.info(System.getProperty("java.io.tmpdir"));
 	    if(!tempFile.exists()) {
-
-	        log.info("xxxxxxxxxxxxx");
+	        log.info("new data file");
 	        try (FileOutputStream fos = new FileOutputStream(tempFile);) {
-	            byte[] bytes = this.getClass().getResourceAsStream("data/eng.traineddata").toString().getBytes();
+	            byte[] bytes = IOUtils.toByteArray(this.getClass().getResourceAsStream("data/eng.traineddata"));
 	            fos.write(bytes);
 
 	        } catch (Exception e) {
+	            tempFile.delete();
 	            e.printStackTrace();
 	        }
 	    }
