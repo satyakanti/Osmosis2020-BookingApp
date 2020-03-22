@@ -33,7 +33,7 @@ public class CommonUtil {
 		if (dateString != null && dateFormat != null) {
 			SimpleDateFormat sdf = new SimpleDateFormat(dateFormat);
 			try {
-				date = sdf.parse(dateString);
+				date = sdf.parse(dateString.substring(0, dateFormat.length()));
 			} catch (ParseException e) {
 				e.printStackTrace();
 			}

@@ -123,8 +123,8 @@ public class MintoServiceImpl implements MintoService {
 
 	static Map<String, String> walletIdMerchantMap = new HashMap<String, String>();
 	{
-		walletIdMerchantMap.put("0xcb5C8FeCD3A1FA89E2E8E4d9D13950ACFFd595Ee", "SwiftiCorporate Booking");
-		walletIdMerchantMap.put("0x50158b03f8c64f18ea327426e2d600c3323f955f", "Restuarant");
+		walletIdMerchantMap.put("0xcb5C8FeCD3A1FA89E2E8E4d9D13950ACFFd595Ee".toUpperCase(), "SwiftiCorporate Booking");
+		walletIdMerchantMap.put("0x50158b03f8c64f18ea327426e2d600c3323f955f".toUpperCase(), "Restuarant");
 	}
 	@Value("${app.smtp.username}")
 	private String username;
@@ -1224,13 +1224,15 @@ public class MintoServiceImpl implements MintoService {
 			if (walletId != null) {
 				List<Transactions> filteredTransactions = getFilteredTransactionsFromWallet(walletId);
 				for (Transactions transactions : filteredTransactions) {
+					String trasactionId = transactions.getBlockHash();
 					Events events = transactions.getEvents()[0];
 					TransactionReport transactionReport = new TransactionReport();
 					transactionReport.setAmount(events.getValue());
-					transactionReport.setMerchantName(walletIdMerchantMap.get(events.getTo()));
-					transactionReport.setDateOfExpense(transactions.getDate());
-					transactionReport.setTransactionPresent(true);
-					expenseReportMap.put(transactions.getBlockHash(), transactionReport);
+					transactionReport.setMerchant(walletIdMerchantMap.get(events.getTo().toUpperCase()));
+					transactionReport.setDate(transactions.getDate());
+					transactionReport.setTxnId(trasactionId);
+					transactionReport.setTxnFound(true);
+					expenseReportMap.put(trasactionId, transactionReport);
 				}
 				for (ExpenseInfo expenseInfo : travelInfo.getExpenseInfos()) {
 					String trasactionId = expenseInfo.getTrasactionId();
@@ -1238,11 +1240,12 @@ public class MintoServiceImpl implements MintoService {
 					if (transactionReport == null) {
 						transactionReport = new TransactionReport();
 						transactionReport.setAmount(expenseInfo.getAmount());
-						transactionReport.setMerchantName(expenseInfo.getMerchantName());
-						transactionReport.setDateOfExpense(expenseInfo.getDateOfExpense());
+						transactionReport.setMerchant(expenseInfo.getMerchantName());
+						transactionReport.setDate(expenseInfo.getDateOfExpense());
+						transactionReport.setTxnId(trasactionId);
 						expenseReportMap.put(trasactionId, transactionReport);
 					}
-					transactionReport.setExpenseClaimed(true);
+					transactionReport.setExpenseFound(true);
 				}
 			}
 		}

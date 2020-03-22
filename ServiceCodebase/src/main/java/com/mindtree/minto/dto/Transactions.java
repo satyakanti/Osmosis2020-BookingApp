@@ -17,7 +17,7 @@ import com.mindtree.minto.util.CommonUtil;
         "events", "isERC20" })
 public class Transactions {
 	
-	static String dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'";
+	static String dateFormat = "yyyy-MM-dd";
 	
     private String blockHash;
  

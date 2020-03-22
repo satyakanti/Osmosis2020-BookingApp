@@ -14,15 +14,16 @@ import lombok.Data;
 @Data
 public class TransactionReport {
 
+    private String txnId;
     
-    private String merchantName;
+    private String merchant;
     
-    private Date dateOfExpense;
+    private Date date;
 
     private String amount;
     
-    private boolean isExpenseClaimed;
+    private boolean expenseFound;
     
-    private boolean isTransactionPresent;
+    private boolean txnFound;
 
 }
