@@ -141,24 +141,9 @@ public class MintoServiceImpl implements MintoService {
 
 	@Autowired
 	RestTemplate restTemplate;
-	{
-	    staticInit();
-	}
-
-    private void staticInit() {
-        File tempFile = new File(System.getProperty("C:\\Users\\swift\\AppData\\Local\\Temp") + "/" + "eng.traineddata");
-	    if(!tempFile.exists()) {
-	        log.info("new data file");
-	        try (FileOutputStream fos = new FileOutputStream(tempFile);) {
-	            byte[] bytes = IOUtils.toByteArray(this.getClass().getResourceAsStream("/data/eng.traineddata"));
-	            fos.write(bytes);
-
-	        } catch (Exception e) {
-	            tempFile.delete();
-	            e.printStackTrace();
-	        }
-	    }
-    }
+	
+	@Value("${app.datapath}")
+	private String datapath;
 
 	/**
 	 * Description : <<WRITE DESCRIPTION HERE>>
@@ -726,8 +711,8 @@ public class MintoServiceImpl implements MintoService {
 		ITesseract instance = new Tesseract();
 		try {
 			//URL resource = getClass().getResource(System.getProperty("java.io.tmpdir") );
-			log.info(property );
-			instance.setDatapath(property.substring(0,property.length()-1) );
+			log.info(datapath );
+			instance.setDatapath(datapath);
 			return processImgeText(instance.doOCR(tempFile));
 		} finally {
 			tempFile.delete();
