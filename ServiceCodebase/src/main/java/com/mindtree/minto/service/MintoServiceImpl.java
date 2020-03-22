@@ -36,7 +36,6 @@ import javax.mail.internet.MimeMultipart;
 import javax.mail.util.ByteArrayDataSource;
 import javax.validation.Valid;
 
-import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -46,6 +45,8 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
@@ -62,7 +63,6 @@ import com.mindtree.minto.dto.DetailType;
 import com.mindtree.minto.dto.Details;
 import com.mindtree.minto.dto.Events;
 import com.mindtree.minto.dto.ExpenseDTO;
-import com.mindtree.minto.dto.TransactionReport;
 import com.mindtree.minto.dto.Fare;
 import com.mindtree.minto.dto.Flight;
 import com.mindtree.minto.dto.FlightInfo;
@@ -79,6 +79,7 @@ import com.mindtree.minto.dto.PaymentDTO;
 import com.mindtree.minto.dto.ReconcileReports;
 import com.mindtree.minto.dto.ReconciliationReport;
 import com.mindtree.minto.dto.RegisterUserDTO;
+import com.mindtree.minto.dto.TransactionReport;
 import com.mindtree.minto.dto.TransactionResultSet;
 import com.mindtree.minto.dto.Transactions;
 import com.mindtree.minto.dto.TravelInfoDTO;
@@ -95,6 +96,7 @@ import com.mindtree.minto.model.Traveller;
 import com.mindtree.minto.model.User;
 import com.mindtree.minto.proxy.ExpenseProxy;
 import com.mindtree.minto.repository.BookingRepository;
+import com.mindtree.minto.repository.ExpenseInfoRepository;
 import com.mindtree.minto.repository.TravelInfoRepository;
 import com.mindtree.minto.repository.UserRepository;
 import com.mindtree.minto.util.CommonUtil;
@@ -140,6 +142,9 @@ public class MintoServiceImpl implements MintoService {
 
 	@Autowired
 	TravelInfoRepository travelDAO;
+	
+	@Autowired
+	ExpenseInfoRepository expenseDAO;
 
 	@Autowired
 	RestTemplate restTemplate;
@@ -1156,39 +1161,47 @@ public class MintoServiceImpl implements MintoService {
 	@Override
 	// @Async
 	public void addExpense(@Valid List<ExpenseDTO> expenses) throws InvalidRequestException, TesseractException {
-		Thread th = new Thread(()-> {
-			TravelInfo travelInfo = null;
-			for (ExpenseDTO expenseDTO : expenses) {
-				if (travelInfo == null) {
-					try {
-						travelInfo = getTravelInfo(expenseDTO.getTravelId());
-						if (travelInfo.getExpenseInfos() == null) {
-							travelInfo.setExpenseInfos(new HashSet<ExpenseInfo>());
-						}
-						ExpenseInfo expenseInfo = new ExpenseInfo();
-						expenseInfo.setDateOfClaim(new Date());
-						expenseInfo.setDescription(expenseDTO.getDescription());
-						InvoiceInfoRequest invoiceInfoReq = new InvoiceInfoRequest();
-						invoiceInfoReq.setExpenseDTO(expenseDTO);
+		Thread th = new Thread(() -> processExpense(expenses));
+		th.start();
+	}
+
+	private void processExpense(List<ExpenseDTO> expenses) {
+		TravelInfo travelInfo = null;
+		for (ExpenseDTO expenseDTO : expenses) {
+			if (travelInfo == null) {
+				try {
+					travelInfo = getTravelInfo(expenseDTO.getTravelId());
+					/*Set<ExpenseInfo> expenseInfos = travelInfo.getExpenseInfos();
+					if (expenseInfos == null) {
+						expenseInfos = new HashSet<ExpenseInfo>();
+						travelInfo.setExpenseInfos(expenseInfos);
+					}*/
+					ExpenseInfo expenseInfo = new ExpenseInfo();
+					expenseInfo.setDateOfClaim(new Date());
+					expenseInfo.setDescription(expenseDTO.getDescription());
+					InvoiceInfoRequest invoiceInfoReq = new InvoiceInfoRequest();
+					invoiceInfoReq.setExpenseDTO(expenseDTO);
+					if (expenseDTO.getDocument() == null) {
 						invoiceInfoReq.setByteStream(travelInfo.getInvoice());
-						InvoiceInfo invoiceInfo = proxy.getIvoiceInfo(invoiceInfoReq);
-//								getInvoiceInfo(expenseDTO, travelInfo.getInvoice());
-						if (invoiceInfo != null) {
-							expenseInfo.setDateOfExpense(invoiceInfo.getDate());
-							expenseInfo.setMerchantName(invoiceInfo.getMerchant());
-							expenseInfo.setTrasactionId(invoiceInfo.getTxnId());
-							expenseInfo.setAmount(invoiceInfo.getAmmount());
-						}
-						expenseInfo.setTravelInfo(travelInfo);
-						travelInfo.getExpenseInfos().add(expenseInfo);
-					} catch (Exception e) {
-						e.printStackTrace();
 					}
+					InvoiceInfo invoiceInfo = proxy.getIvoiceInfo(invoiceInfoReq);
+					//InvoiceInfo invoiceInfo = getInvoiceInfo(expenseDTO, invoiceInfoReq.getByteStream();
+					if (invoiceInfo != null) {
+						expenseInfo.setDateOfExpense(invoiceInfo.getDate());
+						expenseInfo.setMerchantName(invoiceInfo.getMerchant());
+						expenseInfo.setTrasactionId(invoiceInfo.getTxnId());
+						expenseInfo.setAmount(invoiceInfo.getAmmount());
+					}
+					expenseInfo.setTravelInfo(travelInfo);
+					expenseDAO.save(expenseInfo);
+					//expenseInfos.add(expenseInfo);
+				} catch (Exception e) {
+					e.printStackTrace();
 				}
 			}
-			travelDAO.save(travelInfo);
-		});
-		th.start();
+		}
+		
+		//travelDAO.save(travelInfo);
 	}
 
 	@Override

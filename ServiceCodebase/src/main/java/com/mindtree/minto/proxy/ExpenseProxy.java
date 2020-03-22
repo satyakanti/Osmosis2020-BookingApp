@@ -16,7 +16,7 @@ import net.sourceforge.tess4j.TesseractException;
  * @author M1026334
  *
  */
-@FeignClient(name="Payment-service", url="http://localhost:8080")
+@FeignClient(name="Payment-service", url="http://localhost:9010")
 public interface ExpenseProxy {
 	
 	@PostMapping("/api/getInvoiceInfo")
