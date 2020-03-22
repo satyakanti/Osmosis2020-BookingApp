@@ -8,6 +8,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
+import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.context.annotation.Bean;
 import org.springframework.web.client.RestTemplate;
 
@@ -16,6 +17,7 @@ import org.springframework.web.client.RestTemplate;
  * MintoAppApplication.java Created On: Feb 22, 2020 Created By: M1026329
  */
 @SpringBootApplication
+@EnableFeignClients
 //@EnableAsync
 public class MintoAppApplication extends SpringBootServletInitializer {
 

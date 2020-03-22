@@ -71,6 +71,7 @@ import com.mindtree.minto.dto.Hotel;
 import com.mindtree.minto.dto.Insurance;
 import com.mindtree.minto.dto.Invoice;
 import com.mindtree.minto.dto.InvoiceInfo;
+import com.mindtree.minto.dto.InvoiceInfoRequest;
 import com.mindtree.minto.dto.LoginDTO;
 import com.mindtree.minto.dto.PackageBookingDTO;
 import com.mindtree.minto.dto.PackageDTO;
@@ -92,6 +93,7 @@ import com.mindtree.minto.model.ExpenseInfo;
 import com.mindtree.minto.model.TravelInfo;
 import com.mindtree.minto.model.Traveller;
 import com.mindtree.minto.model.User;
+import com.mindtree.minto.proxy.ExpenseProxy;
 import com.mindtree.minto.repository.BookingRepository;
 import com.mindtree.minto.repository.TravelInfoRepository;
 import com.mindtree.minto.repository.UserRepository;
@@ -144,6 +146,9 @@ public class MintoServiceImpl implements MintoService {
 	
 	@Value("${app.datapath}")
 	private String datapath;
+	
+	@Autowired
+	private ExpenseProxy proxy;
 
 	/**
 	 * Description : <<WRITE DESCRIPTION HERE>>
@@ -1163,7 +1168,11 @@ public class MintoServiceImpl implements MintoService {
 						ExpenseInfo expenseInfo = new ExpenseInfo();
 						expenseInfo.setDateOfClaim(new Date());
 						expenseInfo.setDescription(expenseDTO.getDescription());
-						InvoiceInfo invoiceInfo = getInvoiceInfo(expenseDTO, travelInfo.getInvoice());
+						InvoiceInfoRequest invoiceInfoReq = new InvoiceInfoRequest();
+						invoiceInfoReq.setExpenseDTO(expenseDTO);
+						invoiceInfoReq.setByteStream(travelInfo.getInvoice());
+						InvoiceInfo invoiceInfo = proxy.getIvoiceInfo(invoiceInfoReq);
+//								getInvoiceInfo(expenseDTO, travelInfo.getInvoice());
 						if (invoiceInfo != null) {
 							expenseInfo.setDateOfExpense(invoiceInfo.getDate());
 							expenseInfo.setMerchantName(invoiceInfo.getMerchant());
