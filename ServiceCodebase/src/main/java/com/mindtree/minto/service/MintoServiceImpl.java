@@ -62,6 +62,7 @@ import com.mindtree.minto.dto.DetailType;
 import com.mindtree.minto.dto.Details;
 import com.mindtree.minto.dto.Events;
 import com.mindtree.minto.dto.ExpenseDTO;
+import com.mindtree.minto.dto.TransactionReport;
 import com.mindtree.minto.dto.Fare;
 import com.mindtree.minto.dto.Flight;
 import com.mindtree.minto.dto.FlightInfo;
@@ -116,6 +117,11 @@ import net.sourceforge.tess4j.TesseractException;
 @Service
 public class MintoServiceImpl implements MintoService {
 
+	static Map<String, String> walletIdMerchantMap = new HashMap<String, String>();
+	{
+		walletIdMerchantMap.put("0xcb5C8FeCD3A1FA89E2E8E4d9D13950ACFFd595Ee", "SwiftiCorporate Booking");
+		walletIdMerchantMap.put("0x50158b03f8c64f18ea327426e2d600c3323f955f", "Restuarant");
+	}
 	@Value("${app.smtp.username}")
 	private String username;
 	@Value("${app.smtp.password}")
@@ -535,23 +541,42 @@ public class MintoServiceImpl implements MintoService {
 		List<Transactions> filteredTransactions = null;
 		Optional<String> walletID = userDAO.getWalletID(emailID);
 		if (walletID.isPresent()) {
-			ResponseEntity<TransactionResultSet> last25Transactions = restTemplate.exchange(
-					ConfigReader.getBalanceURL().concat(ConfigReader.getCoinContractID().concat("/transfers")),
-					HttpMethod.GET, setHeaderAndAuthToken(), TransactionResultSet.class);
-			filteredTransactions = new ArrayList<Transactions>();
-			for (Transactions transaction : last25Transactions.getBody().getTransactions()) {
-				if (walletID.get().equalsIgnoreCase(transaction.getFrom())
-						|| walletID.get().equalsIgnoreCase(transaction.getTo())) {
-					filteredTransactions.add(transaction);
-				} else {
-					for (Events event : transaction.getEvents()) {
-						if (walletID.get().equalsIgnoreCase(event.getFrom())
-								|| walletID.get().equalsIgnoreCase(event.getTo())) {
-							filteredTransactions.add(transaction);
-							break;
-						}
+			filteredTransactions =  getFilteredTransactions(walletID.get());;
+		}
+		return filteredTransactions;
+	}
+
+	private List<Transactions> getFilteredTransactions(String walletId) {
+		ResponseEntity<TransactionResultSet> last25Transactions = restTemplate.exchange(
+				ConfigReader.getBalanceURL().concat(ConfigReader.getCoinContractID().concat("/transfers")),
+				HttpMethod.GET, setHeaderAndAuthToken(), TransactionResultSet.class);
+		List<Transactions> filteredTransactions = new ArrayList<Transactions>();
+		for (Transactions transaction : last25Transactions.getBody().getTransactions()) {
+			if (walletId.equalsIgnoreCase(transaction.getFrom())
+					|| walletId.equalsIgnoreCase(transaction.getTo())) {
+				filteredTransactions.add(transaction);
+			} else {
+				for (Events event : transaction.getEvents()) {
+					if (walletId.equalsIgnoreCase(event.getFrom())
+							|| walletId.equalsIgnoreCase(event.getTo())) {
+						filteredTransactions.add(transaction);
+						break;
 					}
 				}
+			}
+		}
+		return filteredTransactions;
+	}
+	
+	private List<Transactions> getFilteredTransactionsFromWallet(String walletId) {
+		ResponseEntity<TransactionResultSet> last25Transactions = restTemplate.exchange(
+				ConfigReader.getBalanceURL().concat(ConfigReader.getCoinContractID().concat("/transfers")),
+				HttpMethod.GET, setHeaderAndAuthToken(), TransactionResultSet.class);
+		List<Transactions> filteredTransactions = new ArrayList<Transactions>();
+		for (Transactions transaction : last25Transactions.getBody().getTransactions()) {
+			if (walletId.equalsIgnoreCase(transaction.getFrom())
+					|| walletId.equalsIgnoreCase(transaction.getTo())) {
+				filteredTransactions.add(transaction);
 			}
 		}
 		return filteredTransactions;
@@ -1141,28 +1166,35 @@ public class MintoServiceImpl implements MintoService {
 	@Override
 	// @Async
 	public void addExpense(@Valid List<ExpenseDTO> expenses) throws InvalidRequestException, TesseractException {
-		TravelInfo travelInfo = null;
-		for (ExpenseDTO expenseDTO : expenses) {
-			if (travelInfo == null) {
-				travelInfo = getTravelInfo(expenseDTO.getTravelId());
+		Thread th = new Thread(()-> {
+			TravelInfo travelInfo = null;
+			for (ExpenseDTO expenseDTO : expenses) {
+				if (travelInfo == null) {
+					try {
+						travelInfo = getTravelInfo(expenseDTO.getTravelId());
+						if (travelInfo.getExpenseInfos() == null) {
+							travelInfo.setExpenseInfos(new HashSet<ExpenseInfo>());
+						}
+						ExpenseInfo expenseInfo = new ExpenseInfo();
+						expenseInfo.setDateOfClaim(new Date());
+						expenseInfo.setDescription(expenseDTO.getDescription());
+						InvoiceInfo invoiceInfo = getInvoiceInfo(expenseDTO, travelInfo.getInvoice());
+						if (invoiceInfo != null) {
+							expenseInfo.setDateOfExpense(invoiceInfo.getDate());
+							expenseInfo.setMerchantName(invoiceInfo.getMerchant());
+							expenseInfo.setTrasactionId(invoiceInfo.getTxnId());
+							expenseInfo.setAmount(invoiceInfo.getAmmount());
+						}
+						expenseInfo.setTravelInfo(travelInfo);
+						travelInfo.getExpenseInfos().add(expenseInfo);
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+				}
 			}
-			if (travelInfo.getExpenseInfos() == null) {
-				travelInfo.setExpenseInfos(new HashSet<ExpenseInfo>());
-			}
-			ExpenseInfo expenseInfo = new ExpenseInfo();
-			expenseInfo.setDateOfClaim(new Date());
-			expenseInfo.setDescription(expenseDTO.getDescription());
-			InvoiceInfo invoiceInfo = getInvoiceInfo(expenseDTO, travelInfo.getInvoice());
-			if (invoiceInfo != null) {
-				expenseInfo.setDateOfExpense(invoiceInfo.getDate());
-				expenseInfo.setMerchantName(invoiceInfo.getMerchant());
-				expenseInfo.setTrasactionId(invoiceInfo.getTxnId());
-				expenseInfo.setAmount(invoiceInfo.getAmmount());
-			}
-			expenseInfo.setTravelInfo(travelInfo);
-			travelInfo.getExpenseInfos().add(expenseInfo);
-		}
-		travelDAO.save(travelInfo);
+			travelDAO.save(travelInfo);
+		});
+		th.start();
 	}
 
 	@Override
@@ -1173,6 +1205,41 @@ public class MintoServiceImpl implements MintoService {
 			expenses = travelInfo.getExpenseInfos();
 		}
 		return expenses;
+	}
+	
+	@Override
+	public List<TransactionReport> getExpenseReport(Integer travelId) throws InvalidRequestException {
+		Map<String, TransactionReport> expenseReportMap = new HashMap<String, TransactionReport>();
+		String walletId = null;
+		TravelInfo travelInfo = getTravelInfo(travelId);
+		if (travelInfo != null) {
+			walletId = travelInfo.getUser().getWalletID();
+			if (walletId != null) {
+				List<Transactions> filteredTransactions = getFilteredTransactionsFromWallet(walletId);
+				for (Transactions transactions : filteredTransactions) {
+					Events events = transactions.getEvents()[0];
+					TransactionReport transactionReport = new TransactionReport();
+					transactionReport.setAmount(events.getValue());
+					transactionReport.setMerchantName(walletIdMerchantMap.get(events.getTo()));
+					transactionReport.setDateOfExpense(transactions.getDate());
+					transactionReport.setTransactionPresent(true);
+					expenseReportMap.put(transactions.getBlockHash(), transactionReport);
+				}
+				for (ExpenseInfo expenseInfo : travelInfo.getExpenseInfos()) {
+					String trasactionId = expenseInfo.getTrasactionId();
+					TransactionReport transactionReport = expenseReportMap.get(trasactionId);
+					if (transactionReport == null) {
+						transactionReport = new TransactionReport();
+						transactionReport.setAmount(expenseInfo.getAmount());
+						transactionReport.setMerchantName(expenseInfo.getMerchantName());
+						transactionReport.setDateOfExpense(expenseInfo.getDateOfExpense());
+						expenseReportMap.put(trasactionId, transactionReport);
+					}
+					transactionReport.setExpenseClaimed(true);
+				}
+			}
+		}
+		return new ArrayList<TransactionReport>(expenseReportMap.values());
 	}
 
 	private TravelInfo getTravelInfo(Integer traveId) throws InvalidRequestException {

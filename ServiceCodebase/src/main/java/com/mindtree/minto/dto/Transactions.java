@@ -3,8 +3,11 @@
  */
 package com.mindtree.minto.dto;
 
+import java.util.Date;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+import com.mindtree.minto.util.CommonUtil;
 
 /**
  * 
@@ -13,8 +16,10 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 @JsonPropertyOrder({ "index", "hash", "blockHash", "blockNumber", "timestamp", "status", "isPrivate", "from", "to",
         "events", "isERC20" })
 public class Transactions {
+	
+	static String dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'";
+	
     private String blockHash;
-
  
     private String isPrivate;
 
@@ -35,6 +40,10 @@ public class Transactions {
     private String timestamp;
 
     private String status;
+    
+    public Date getDate() {
+    	return CommonUtil.getDate(timestamp, dateFormat);
+    }
 
     public String getBlockHash() {
         return blockHash;

@@ -3,7 +3,10 @@
  */
 package com.mindtree.minto.dto;
 
+import java.util.Date;
+
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+import com.mindtree.minto.util.CommonUtil;
 
 /**
  * 
@@ -50,7 +53,7 @@ public class Events {
     public void setValue(String value) {
         this.value = value;
     }
-
+    
     @Override
     public String toString() {
         return "ClassPojo [eventSignature = " + eventSignature + ", from = " + from + ", to = " + to + ", value = "

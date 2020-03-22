@@ -31,6 +31,7 @@ import com.mindtree.minto.dto.PackageDTO;
 import com.mindtree.minto.dto.PaymentDTO;
 import com.mindtree.minto.dto.ReconciliationReport;
 import com.mindtree.minto.dto.RegisterUserDTO;
+import com.mindtree.minto.dto.TransactionReport;
 import com.mindtree.minto.dto.TravelInfoDTO;
 import com.mindtree.minto.dto.UserDTO;
 import com.mindtree.minto.exception.AuthenticationFailureException;
@@ -201,10 +202,17 @@ public class MintoController {
     }
     
     @ApiOperation(value = "Get Expenses")
-    @GetMapping(value = "/api/expense/{travelId}")
+    @GetMapping(value = "/api/expenses/{travelId}")
     public ResponseEntity<Set<ExpenseInfo>> getExpenses(@PathVariable("travelId") Integer travelId) throws InvalidRequestException {
         Set<ExpenseInfo> expenses = mintoService.getExpenses(travelId);
         return new ResponseEntity<Set<ExpenseInfo>>(expenses, HttpStatus.OK);
+    }
+    
+    @ApiOperation(value = "Get Expenses")
+    @GetMapping(value = "/api/expense/{travelId}")
+    public ResponseEntity<List<TransactionReport>> getExpenseReport(@PathVariable("travelId") Integer travelId) throws InvalidRequestException {
+        List<TransactionReport> expenses = mintoService.getExpenseReport(travelId);
+        return new ResponseEntity<List<TransactionReport>>(expenses, HttpStatus.OK);
     }
     
     @ApiOperation(value = "")

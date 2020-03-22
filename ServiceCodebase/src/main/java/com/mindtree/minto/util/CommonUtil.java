@@ -1,5 +1,6 @@
 package com.mindtree.minto.util;
 
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -25,6 +26,19 @@ public class CommonUtil {
 		}
 		return format;
 		
+	}
+	
+	public static Date getDate(String dateString, String dateFormat) {
+		Date date = null;
+		if (dateString != null && dateFormat != null) {
+			SimpleDateFormat sdf = new SimpleDateFormat(dateFormat);
+			try {
+				date = sdf.parse(dateString);
+			} catch (ParseException e) {
+				e.printStackTrace();
+			}
+		}
+		return date;
 	}
 	
 	public static String getNewDate() {

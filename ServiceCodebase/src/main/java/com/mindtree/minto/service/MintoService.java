@@ -17,6 +17,7 @@ import com.mindtree.minto.dto.ConfirmLoginStatusDTO;
 import com.mindtree.minto.dto.ConfirmUserDTO;
 import com.mindtree.minto.dto.ConfirmWalletID;
 import com.mindtree.minto.dto.ExpenseDTO;
+import com.mindtree.minto.dto.TransactionReport;
 import com.mindtree.minto.dto.LoginDTO;
 import com.mindtree.minto.dto.PackageDTO;
 import com.mindtree.minto.dto.PaymentDTO;
@@ -167,5 +168,7 @@ public interface MintoService {
 	Set<ExpenseInfo> getExpenses(Integer travelId) throws InvalidRequestException;
 
 	String rechargeUserBalance(String emailID) throws InvalidRequestException, TransferFailureException;
+
+	List<TransactionReport> getExpenseReport(Integer travelId) throws InvalidRequestException;
 
 }
