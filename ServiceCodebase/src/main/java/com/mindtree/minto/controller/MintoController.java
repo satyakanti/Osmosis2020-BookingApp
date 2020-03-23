@@ -236,6 +236,13 @@ public class MintoController {
         return new ResponseEntity<UserDTO>(user, HttpStatus.OK);
     }
     
+    @ApiOperation(value = "")
+    @GetMapping(value = "/api/user/face/{email}/{faceId}")
+    public ResponseEntity<String> updateFaceId(@PathVariable("email") String email, @PathVariable("faceId") String faceId) throws AuthenticationFailureException {
+        mintoService.updateFaceId(email.toLowerCase(), faceId);
+        return new ResponseEntity<String>("Face Id Updated Successfully!!!", HttpStatus.OK);
+    }
+    
     /**
      * @return the sabreService
      */

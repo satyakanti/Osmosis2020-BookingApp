@@ -34,7 +34,7 @@ public class BaseUserDTO {
     /**
      * password
      */
-    @NotNull(message = "Password is a required field")
+    //@NotNull(message = "Password is a required field")
     private String password;
     /**
      * walletID

@@ -171,4 +171,6 @@ public interface MintoService {
 
 	List<TransactionReport> getExpenseReport(Integer travelId) throws InvalidRequestException;
 
+	void updateFaceId(String email, String faceId) throws AuthenticationFailureException;
+
 }

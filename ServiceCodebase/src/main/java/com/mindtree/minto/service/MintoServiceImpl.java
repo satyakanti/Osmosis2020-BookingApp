@@ -45,8 +45,6 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
@@ -1109,6 +1107,15 @@ public class MintoServiceImpl implements MintoService {
 			mapEntityToDTO(user, userDTO);
 		}
 		return userDTO;
+	}
+	
+	@Override
+	public void updateFaceId(String email, String faceId) throws AuthenticationFailureException {
+		User user = findUser(email);
+		if (user != null) {
+			user.setFaceID(faceId);
+			userDAO.save(user);
+		}
 	}
 
 	private void mapEntityToDTO(User user, UserDTO userDTO) {
