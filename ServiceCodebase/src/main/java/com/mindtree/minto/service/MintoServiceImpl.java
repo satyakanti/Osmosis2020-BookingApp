@@ -121,7 +121,7 @@ public class MintoServiceImpl implements MintoService {
 
 	static Map<String, String> walletIdMerchantMap = new HashMap<String, String>();
 	{
-		walletIdMerchantMap.put("0xcb5C8FeCD3A1FA89E2E8E4d9D13950ACFFd595Ee".toUpperCase(), "SwiftiCorporate Booking");
+		walletIdMerchantMap.put("0xcb5C8FeCD3A1FA89E2E8E4d9D13950ACFFd595Ee".toUpperCase(), "Swift Corporate Booking");
 		walletIdMerchantMap.put("0x50158b03f8c64f18ea327426e2d600c3323f955f".toUpperCase(), "Restuarant");
 	}
 	@Value("${app.smtp.username}")
@@ -1251,6 +1251,10 @@ public class MintoServiceImpl implements MintoService {
 						transactionReport.setDate(expenseInfo.getDateOfExpense());
 						transactionReport.setTxnId(trasactionId);
 						expenseReportMap.put(trasactionId, transactionReport);
+					}
+					else if ("Restuarant".equals(transactionReport.getMerchant())
+							&& expenseInfo.getMerchantName() != null) {
+						transactionReport.setMerchant(expenseInfo.getMerchantName());
 					}
 					transactionReport.setExpenseFound(true);
 				}
