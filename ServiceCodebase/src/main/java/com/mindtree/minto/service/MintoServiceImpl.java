@@ -5,6 +5,7 @@ package com.mindtree.minto.service;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -49,6 +50,11 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
+import com.itextpdf.text.pdf.PdfReader;
+import com.itextpdf.text.pdf.parser.ImageRenderInfo;
+import com.itextpdf.text.pdf.parser.PdfReaderContentParser;
+import com.itextpdf.text.pdf.parser.RenderListener;
+import com.itextpdf.text.pdf.parser.TextRenderInfo;
 import com.mindtree.minto.dto.BookingDTO;
 import com.mindtree.minto.dto.Car;
 import com.mindtree.minto.dto.ConfirmBalance;
@@ -1175,40 +1181,63 @@ public class MintoServiceImpl implements MintoService {
 	private void processExpense(List<ExpenseDTO> expenses) {
 		TravelInfo travelInfo = null;
 		for (ExpenseDTO expenseDTO : expenses) {
-			if (travelInfo == null) {
-				try {
+			try {
+				if (travelInfo == null) {
 					travelInfo = getTravelInfo(expenseDTO.getTravelId());
-					/*Set<ExpenseInfo> expenseInfos = travelInfo.getExpenseInfos();
-					if (expenseInfos == null) {
-						expenseInfos = new HashSet<ExpenseInfo>();
-						travelInfo.setExpenseInfos(expenseInfos);
-					}*/
-					ExpenseInfo expenseInfo = new ExpenseInfo();
-					expenseInfo.setDateOfClaim(new Date());
-					expenseInfo.setDescription(expenseDTO.getDescription());
-					InvoiceInfoRequest invoiceInfoReq = new InvoiceInfoRequest();
-					invoiceInfoReq.setExpenseDTO(expenseDTO);
-					if (expenseDTO.getDocument() == null) {
-						invoiceInfoReq.setByteStream(travelInfo.getInvoice());
-					}
-					InvoiceInfo invoiceInfo = proxy.getIvoiceInfo(invoiceInfoReq);
-					//InvoiceInfo invoiceInfo = getInvoiceInfo(expenseDTO, invoiceInfoReq.getByteStream();
-					if (invoiceInfo != null) {
-						expenseInfo.setDateOfExpense(invoiceInfo.getDate());
-						expenseInfo.setMerchantName(invoiceInfo.getMerchant());
-						expenseInfo.setTrasactionId(invoiceInfo.getTxnId());
-						expenseInfo.setAmount(invoiceInfo.getAmmount());
-					}
-					expenseInfo.setTravelInfo(travelInfo);
-					expenseDAO.save(expenseInfo);
-					//expenseInfos.add(expenseInfo);
-				} catch (Exception e) {
-					e.printStackTrace();
 				}
+				/*
+				 * Set<ExpenseInfo> expenseInfos = travelInfo.getExpenseInfos(); if
+				 * (expenseInfos == null) { expenseInfos = new HashSet<ExpenseInfo>();
+				 * travelInfo.setExpenseInfos(expenseInfos); }
+				 */
+				ExpenseInfo expenseInfo = new ExpenseInfo();
+				expenseInfo.setDateOfClaim(new Date());
+				expenseInfo.setDescription(expenseDTO.getDescription());
+				InvoiceInfoRequest invoiceInfoReq = new InvoiceInfoRequest();
+				invoiceInfoReq.setExpenseDTO(expenseDTO);
+				if (expenseDTO.getDocument() == null) {
+					invoiceInfoReq.setByteStream(travelInfo.getInvoice());
+				}
+
+				InvoiceInfo invoiceInfoRes = readPDFUsingIText(invoiceInfoReq);
+
+				if (invoiceInfoRes.getAmmount() == null || invoiceInfoRes.getDate() == null
+						|| invoiceInfoRes.getMerchant() == null || invoiceInfoRes.getTxnId() == null) {
+					InvoiceInfo invoiceInfoTesseract = proxy.getIvoiceInfo(invoiceInfoReq);
+					mergeTesseractResToItextRes(invoiceInfoRes, invoiceInfoTesseract);
+				}
+
+				if (invoiceInfoRes != null) {
+					expenseInfo.setDateOfExpense(invoiceInfoRes.getDate());
+					expenseInfo.setMerchantName(invoiceInfoRes.getMerchant());
+					expenseInfo.setTrasactionId(invoiceInfoRes.getTxnId());
+					expenseInfo.setAmount(invoiceInfoRes.getAmmount());
+				}
+				expenseInfo.setTravelInfo(travelInfo);
+				expenseDAO.save(expenseInfo);
+				// expenseInfos.add(expenseInfo);
+			} catch (Exception e) {
+				e.printStackTrace();
 			}
 		}
-		
-		//travelDAO.save(travelInfo);
+
+		// travelDAO.save(travelInfo);
+	}
+
+	private void mergeTesseractResToItextRes(InvoiceInfo invoiceInfoRes, InvoiceInfo invoiceInfoTesseract) {
+		if (invoiceInfoRes.getAmmount() != null) {
+			invoiceInfoRes.setAmmount(invoiceInfoTesseract.getAmmount());
+		}
+		if (invoiceInfoRes.getDate() != null) {
+			invoiceInfoRes.setDate(invoiceInfoTesseract.getDate());
+		}
+		if (invoiceInfoRes.getMerchant() != null) {
+			invoiceInfoRes.setMerchant(invoiceInfoTesseract.getMerchant());
+		}
+		if (invoiceInfoRes.getTxnId() != null) {
+			invoiceInfoRes.setTxnId(invoiceInfoTesseract.getTxnId());
+		}
+
 	}
 
 	@Override
@@ -1334,5 +1363,82 @@ public class MintoServiceImpl implements MintoService {
 			throw new RuntimeException(e);
 		}
 	}
+	
+	
+	private InvoiceInfo readPDFUsingIText(InvoiceInfoRequest invoiceInfoReq) {
+		InvoiceInfo invoiceInfo = new InvoiceInfo();
+		byte[] decoder = null;
+		if (invoiceInfoReq.getByteStream() != null) {
+			decoder = invoiceInfoReq.getByteStream();
+		} else {
+			decoder = Base64.getDecoder().decode(invoiceInfoReq.getExpenseDTO().getDocument().split(";base64,")[1]);
+		}
+		try {
+			PdfReader reader = new PdfReader(decoder);
+			int pageILikeToCheck = reader.getNumberOfPages(); // set the page or loop them all
+
+			PdfReaderContentParser parser = new PdfReaderContentParser(reader);
+			parser.processContent(pageILikeToCheck, new RenderListener() {
+				@Override
+				public void renderImage(ImageRenderInfo renderInfo) {
+					/*
+					 * PdfImageObject image; try { image = renderInfo.getImage(); if (image == null)
+					 * return; System.out.println("Found image");
+					 * System.out.println(renderInfo.getStartPoint()); } catch (IOException e) {
+					 * e.printStackTrace(); }
+					 */}
+
+				@Override
+				public void renderText(TextRenderInfo renderInfo) {
+					if (renderInfo.getText().length() > 0) {
+						System.out.println(renderInfo.getText());
+						processText(renderInfo.getText(), invoiceInfo);
+					}
+				}
+
+				@Override
+				public void endTextBlock() {
+				}
+
+				@Override
+				public void beginTextBlock() {
+				}
+
+			});
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return invoiceInfo;
+	}
+	 
+	 /**
+	  * processText
+	  * @param text
+	  * @param invoiceInfo
+	  */
+    private void processText(String text, InvoiceInfo invoiceInfo) {
+			if(text.startsWith("Date : ")) {
+				SimpleDateFormat sf = new SimpleDateFormat("EEE, d MMM yyyy");
+				String substring = text.substring("Date : ".length());
+				try {
+					Date parse = sf.parse(substring.trim());
+					invoiceInfo.setDate(parse);
+				} catch (ParseException e) {
+					e.printStackTrace();
+				}
+			
+			}
+			else if(text.startsWith("Total Price: ")) {
+				invoiceInfo.setAmmount(text.substring("Total Price: ".length()));
+			}
+			else if(text.startsWith("Ref: ")) {
+				invoiceInfo.setTxnId(text.substring("Ref: ".length()));
+			}
+			else if(text.startsWith("For ")) {
+				invoiceInfo.setMerchant(text.substring("For ".length(), text.indexOf(':') - 1).trim());
+			}
+			
+		}
 
 }
